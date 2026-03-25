@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f5f3ef">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Prehľad">
+<title>Prehľad</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%232c2825'/%3E%3Ctext x='90' y='118' font-family='Georgia,serif' font-size='64' font-weight='700' fill='%23f5f3ef' text-anchor='middle'%3EPM%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #f5f3ef;
+  --bg2:      #ffffff;
+  --bg3:      #f0ede8;
+  --border:   #e4dfd8;
+  --border2:  #c8bfb5;
+  --text:     #2c2825;
+  --text2:    #6b6460;
+  --text3:    #9e9590;
+  --red:      #c0392b;
+  --red-bg:   #fdf2f1;
+  --red-bd:   #f5c6c2;
+  --orange:   #c96a1a;
+  --ora-bg:   #fdf6f0;
+  --ora-bd:   #f5d9be;
+  --green:    #1e7a4a;
+  --grn-bg:   #f0faf5;
+  --grn-bd:   #b8e6cc;
+  --blue:     #1a5fa0;
+  --blu-bg:   #f0f6fd;
+  --blu-bd:   #b8d4f0;
+  --gold:     #9a6f1e;
+  --gld-bg:   #fdf8ee;
+  --gld-bd:   #f0d88a;
+  --sans:     'DM Sans', system-ui, sans-serif;
+  --serif:    'DM Serif Display', Georgia, serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 14px;
+  min-height: 100vh; overflow-x: hidden;
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── HEADER ── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(245,243,239,0.94);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  height: 56px; display: flex; align-items: center;
+  padding: 0 16px; gap: 8px; overflow: hidden;
+}
+.logo {
+  font-family: var(--serif); font-size: 17px; font-weight: 400;
+  color: var(--text); flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hbtn {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px;
+  font-family: var(--sans); font-size: 12px; font-weight: 500;
+  color: var(--text2); cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.hbtn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.hbtn-lbl { display: none; }
+@media(min-width:420px){ .hbtn-lbl { display: inline; } }
+
+/* ── CONFIG ── */
+.cfg-wrap { margin: 12px 16px 0; }
+.cfg-wrap.hidden { display: none; }
+.cfg-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+}
+.cfg-box h4 {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--text2); margin-bottom: 12px;
+}
+.cfg-box input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 11px; font-size: 13px;
+  color: var(--text); font-family: var(--sans); outline: none;
+}
+.cfg-box input:focus { border-color: var(--blue); }
+.cfg-actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn-primary {
+  background: var(--text); color: #fff; border: none;
+  border-radius: 7px; padding: 9px 18px;
+  font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.btn-ghost {
+  background: transparent; color: var(--text2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 14px;
+  font-family: var(--sans); font-size: 12px; cursor: pointer;
+}
+
+/* ── SECTIONS ── */
+.sec { display: none; }
+.sec.active { display: block; }
+
+/* ── STATS ── */
+.stats {
+  display: grid; grid-template-columns: repeat(2,1fr);
+  gap: 8px; padding: 12px 16px 0;
+}
+@media(min-width:500px){ .stats { grid-template-columns: repeat(4,1fr); } }
+.stat {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+  user-select: none;
+}
+.stat:hover { border-color: var(--border2); }
+.stat.active { border-color: var(--border2); box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.stat-val { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.stat-lbl { font-size: 11px; color: var(--text3); font-weight: 500; }
+.stat.s-red    .stat-val { color: var(--red); }
+.stat.s-orange .stat-val { color: var(--orange); }
+.stat.s-blue   .stat-val { color: var(--blue); }
+
+/* ── STAT DETAIL ── */
+.stat-detail {
+  margin: 10px 16px 0;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+}
+.stat-detail.hidden { display: none; }
+.sd-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+}
+.sd-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 20px; color: var(--text3); line-height: 1; padding: 0 4px;
+}
+
+/* ── SEARCH BAR ── */
+.search-bar {
+  margin: 10px 16px 0;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
+}
+.search-row-inputs { display: flex; gap: 8px; flex-wrap: wrap; }
+.search-input-wrap { position: relative; flex: 1; min-width: 160px; }
+.search-input-wrap svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--text3); pointer-events: none;
+}
+.search-input-wrap input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 10px 9px 32px;
+  font-size: 13px; color: var(--text); font-family: var(--sans); outline: none;
+}
+.search-input-wrap input:focus { border-color: var(--blue); background: var(--bg2); }
+.filter-sel {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 10px; font-size: 12px; color: var(--text);
+  font-family: var(--sans); outline: none; -webkit-appearance: none; cursor: pointer;
+}
+.filter-sel:focus { border-color: var(--blue); }
+.filter-sel option { background: var(--bg2); }
+.search-results { margin-top: 8px; }
+
+/* ── PROJECT ROW ── */
+.prow {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.prow:last-child { border-bottom: none; }
+.prow:hover { background: var(--bg3); }
+.prow-num { font-size: 10px; font-weight: 600; color: var(--text3); min-width: 52px; padding-top: 2px; }
+.prow-body { flex: 1; min-width: 0; }
+.prow-name {
+  font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prow-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.tag {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 500; border-radius: 5px; padding: 2px 7px; white-space: nowrap;
+}
+.tag-faza  { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.tag-lopta { background: var(--ora-bg); color: var(--orange); border: 1px solid var(--ora-bd); }
+.tag-akcia { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-bd); }
+.prow-days { font-size: 11px; font-weight: 700; flex-shrink: 0; padding-top: 2px; min-width: 36px; text-align: right; }
+.prow-days.red    { color: var(--red); }
+.prow-days.orange { color: var(--orange); }
+.prow-days.muted  { color: var(--text3); }
+
+/* ── EMPTY ── */
+.empty {
+  padding: 32px 16px; text-align: center; color: var(--text3); font-size: 13px;
+}
+.empty svg { width: 28px; height: 28px; margin: 0 auto 8px; display: block; opacity: .3; }
+
+/* ── PONUKY ── */
+.sec-wrap { padding: 12px 16px 0; }
+
+.pform {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; margin-bottom: 12px;
+}
+.pform-head {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+.pform-head svg { width: 14px; height: 14px; }
+.pform-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.pf label {
+  display: block; font-size: 11px; font-weight: 500; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px;
+}
+.pf input, .pf select {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 7px; padding: 10px 12px; font-size: 13px; color: var(--text);
+  font-family: var(--sans); outline: none; -webkit-appearance: none;
+}
+.pf input:focus, .pf select:focus { border-color: var(--blue); background: var(--bg2); }
+.pf select option { background: var(--bg2); }
+.suma-w { position: relative; }
+.suma-w input { padding-left: 24px; }
+.suma-pfx { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text3); pointer-events: none; }
+
+/* proj search dropdown */
+.proj-search-wrap { position: relative; }
+.proj-dropdown {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  max-height: 200px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,.1);
+}
+.proj-dropdown-item {
+  padding: 9px 12px; cursor: pointer; font-size: 12px; border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.proj-dropdown-item:last-child { border-bottom: none; }
+.proj-dropdown-item:hover { background: var(--bg3); }
+.proj-selected {
+  display: none; margin-top: 5px; padding: 6px 10px;
+  background: var(--blu-bg); border: 1px solid var(--blu-bd);
+  border-radius: 6px; font-size: 12px; color: var(--blue);
+  align-items: center; justify-content: space-between;
+}
+.proj-selected.show { display: flex; }
+.proj-selected button { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--blue); }
+
+.btn-save {
+  background: var(--text); color: #fff; border: none; border-radius: 8px;
+  padding: 13px; font-family: var(--sans); font-size: 13px; font-weight: 600;
+  cursor: pointer; width: 100%; margin-top: 4px;
+}
+.btn-save:hover { opacity: .85; }
+
+/* ponuky list */
+.ponuky-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 11px 14px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  transition: background .12s;
+}
+.ponuky-card:hover { background: var(--bg3); }
+.ponuky-card.winner { border-color: var(--gld-bd); background: var(--gld-bg); }
+.pc-info { flex: 1; min-width: 0; }
+.pc-who { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-meta { font-size: 11px; color: var(--text3); }
+.pc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.pc-suma { font-size: 14px; font-weight: 700; color: var(--text); }
+.pc-suma.none { font-size: 11px; color: var(--text3); font-weight: 400; }
+.pc-stav {
+  font-size: 10px; font-weight: 600; border-radius: 4px; padding: 2px 7px;
+}
+.stav-cakam    { background: var(--ora-bg); color: var(--orange); border: 1px solid var(--ora-bd); }
+.stav-prijata  { background: var(--blu-bg); color: var(--blue);   border: 1px solid var(--blu-bd); }
+.stav-winner   { background: var(--gld-bg); color: var(--gold);   border: 1px solid var(--gld-bd); }
+
+.win-btn {
+  background: none; border: 1px solid var(--border); border-radius: 5px;
+  padding: 4px 8px; cursor: pointer; font-size: 13px; color: var(--text3);
+  flex-shrink: 0; transition: all .15s;
+}
+.win-btn.active { background: var(--gld-bg); border-color: var(--gld-bd); color: var(--gold); }
+
+.typ-group { margin-bottom: 10px; }
+.typ-label {
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .07em; padding: 6px 2px 4px;
+}
+
+/* ponuky summary bar */
+.sum-bar {
+  background: var(--grn-bg); border: 1px solid var(--grn-bd);
+  border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.sum-bar.hidden { display: none; }
+.sum-item { text-align: center; }
+.sum-val { font-size: 17px; font-weight: 700; color: var(--text); }
+.sum-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; }
+
+/* budget bar */
+.budget-bar {
+  background: var(--gld-bg); border: 1px solid var(--gld-bd);
+  border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+}
+.budget-bar.hidden { display: none; }
+.budget-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.budget-title { font-size: 12px; font-weight: 600; color: var(--gold); }
+.budget-edit-btn {
+  background: none; border: 1px solid var(--gld-bd); border-radius: 5px;
+  padding: 4px 10px; font-size: 11px; color: var(--gold); cursor: pointer;
+}
+.budget-nums { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+.bn { text-align: center; }
+.bn-val { font-size: 17px; font-weight: 700; color: var(--text); }
+.bn-val.over  { color: var(--red); }
+.bn-val.under { color: var(--green); }
+.bn-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; }
+.progress-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: var(--green); transition: width .4s; }
+.progress-fill.over { background: var(--red); }
+.budget-input-row { display: flex; gap: 8px; margin-top: 10px; }
+.budget-input-row.hidden { display: none; }
+.budget-input-row input {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; font-size: 13px; color: var(--text); font-family: var(--sans); outline: none;
+}
+
+/* ponuky filter bar */
+.ponuky-filter-bar {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;
+}
+.ponuky-search-wrap { position: relative; flex: 1; min-width: 150px; }
+.ponuky-search-wrap svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 13px; height: 13px; color: var(--text3); pointer-events: none;
+}
+.ponuky-search-wrap input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px 8px 29px; font-size: 12px;
+  color: var(--text); font-family: var(--sans); outline: none;
+}
+.ponuky-search-wrap input:focus { border-color: var(--blue); }
+.ponuky-dropdown {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  max-height: 180px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,.1);
+}
+.stav-btns { display: flex; gap: 5px; }
+.sbtn {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 20px;
+  padding: 6px 12px; font-size: 11px; font-weight: 500; color: var(--text2); cursor: pointer;
+}
+.sbtn.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+/* archív */
+.archiv-search {
+  margin-bottom: 10px; position: relative;
+}
+.archiv-search svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--text3); pointer-events: none;
+}
+.archiv-search input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px 10px 34px; font-size: 13px;
+  color: var(--text); font-family: var(--sans); outline: none;
+}
+.archiv-search input:focus { border-color: var(--blue); }
+.archiv-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 11px 14px; margin-bottom: 6px; display: flex; align-items: center;
+  gap: 10px; cursor: pointer; opacity: .75; transition: opacity .15s, background .12s;
+}
+.archiv-card:hover { opacity: 1; background: var(--bg3); }
+
+/* ── MODAL ── */
+.overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(44,40,37,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.overlay.hidden { display: none; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto;
+}
+.modal h3 { font-family: var(--serif); font-size: 18px; margin-bottom: 16px; }
+.mfields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mf { display: flex; flex-direction: column; gap: 5px; }
+.mf.full { grid-column: 1/-1; }
+.mf label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+.mf input, .mf select, .mf textarea {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 7px;
+  padding: 9px 11px; font-size: 13px; color: var(--text); font-family: var(--sans);
+  outline: none; -webkit-appearance: none;
+}
+.mf input:focus, .mf select:focus, .mf textarea:focus { border-color: var(--blue); background: var(--bg2); }
+.mf select option { background: var(--bg2); }
+.mf textarea { resize: vertical; min-height: 68px; }
+.mactions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--text); color: #fff; border-radius: 8px;
+  padding: 10px 18px; font-size: 13px; font-weight: 500;
+  z-index: 300; opacity: 0; transition: all .25s; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.ok  { background: var(--green); }
+.toast.err { background: var(--red); }
+
+/* ── NAV ── */
+nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(245,243,239,.96);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.ntab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 0; cursor: pointer; font-size: 10px; font-weight: 600;
+  color: var(--text3); text-transform: uppercase; letter-spacing: .06em;
+  transition: color .15s; user-select: none;
+}
+.ntab svg { width: 22px; height: 22px; }
+.ntab.active { color: var(--text); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.fade { animation: fadeUp .25s ease both; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .8s linear infinite; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Tornyos Architects</div>
+  <button class="hbtn" onclick="syncData()">
+    <svg id="syncIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M23 4v6h-6M1 20v-6h6"/>
+      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+    </svg>
+    <span class="hbtn-lbl">Sync</span>
+  </button>
+  <button class="hbtn" onclick="openAddModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    <span class="hbtn-lbl">Projekt</span>
+  </button>
+  <button class="hbtn" onclick="toggleCfg()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"/>
+    </svg>
+  </button>
+</header>
+
+<!-- CONFIG -->
+<div class="cfg-wrap hidden" id="cfgWrap">
+  <div class="cfg-box">
+    <h4>⚙ Nastavenia</h4>
+    <input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <div class="cfg-actions">
+      <button class="btn-primary" onclick="saveCfg()">Uložiť a pripojiť</button>
+      <button class="btn-ghost" onclick="loadDemo()">Demo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SEKCIA 1 – PREHĽAD
+════════════════════════════════════════ -->
+<div class="sec active" id="secPrehled">
+
+  <!-- Štatistiky – dve skupiny -->
+  <div style="padding: 12px 16px 0;">
+
+    <!-- Skupina 1: Urgentnosť -->
+    <div style="margin-bottom: 8px;">
+      <div style="font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; padding-left: 2px;">Urgentnosť</div>
+      <div style="display: grid; grid-template-columns: repeat(3,1fr); gap: 7px;">
+        <div class="stat s-red" id="stHori" onclick="toggleStat('hori')">
+          <div class="stat-val" id="vHori">0</div>
+          <div class="stat-lbl">Horí dnes</div>
+        </div>
+        <div class="stat s-orange" id="stCakam" onclick="toggleStat('cakam')">
+          <div class="stat-val" id="vCakam">0</div>
+          <div class="stat-lbl">Čakám na odpoveď</div>
+        </div>
+        <div class="stat s-blue" id="stDeadline" onclick="toggleStat('deadline')">
+          <div class="stat-val" id="vDeadline">0</div>
+          <div class="stat-lbl">Deadline tento týždeň</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skupina 2: Aktivita -->
+    <div>
+      <div style="font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; padding-left: 2px;">Aktivita</div>
+      <div style="display: grid; grid-template-columns: repeat(2,1fr); gap: 7px;">
+        <div class="stat" id="stAktivne" onclick="toggleStat('aktivne')">
+          <div class="stat-val" id="vAktivne">0</div>
+          <div class="stat-lbl">Aktívne projekty</div>
+        </div>
+        <div class="stat" id="stPozastavene" onclick="toggleStat('pozastavene')">
+          <div class="stat-val" id="vPozastavene">0</div>
+          <div class="stat-lbl">Pozastavené</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Vyhľadávanie + filtre -->
+  <div class="search-bar">
+    <div class="search-row-inputs">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="searchQ" type="text" placeholder="Hľadať projekt…" oninput="doSearch()">
+      </div>
+      <select class="filter-sel" id="searchFaza" onchange="doSearch()">
+        <option value="">Všetky fázy</option>
+        <option>Štúdia</option>
+        <option>Stavebný zámer</option>
+        <option>Stavebný projekt</option>
+        <option>Stavebný a realizačný projekt</option>
+        <option>Realizačný projekt</option>
+        <option>Čakanie – inžiniering zámeru</option>
+        <option>Čakanie – inžiniering projektu</option>
+        <option>Projekčná podpora pri realizácii</option>
+        <option>Autorský dozor</option>
+        <option>Projektový servis</option>
+        <option>Projektový servis pre inžiniering</option>
+        <option>Územný development</option>
+        <option>Uzemnoplánovacia dokumentácia</option>
+        <option>Nezaradené</option>
+        <option>Pozastavený</option>
+      </select>
+      <select class="filter-sel" id="searchLopta" onchange="doSearch()">
+        <option value="">Lopta u koho</option>
+        <option>PM</option><option>Projektant</option>
+        <option>Architekt</option><option>Projektant+Profesista</option>
+        <option>Profesista</option><option>Klient</option>
+        <option>Inžiniering</option><option>Šéf</option><option>Tomáš</option>
+      </select>
+    </div>
+    <div class="search-results" id="searchResults" style="display:none"></div>
+  </div>
+
+  <!-- Detail panel pri kliknutí na štatistiku -->
+  <div class="stat-detail hidden" id="statDetail">
+    <div class="sd-head">
+      <span id="sdTitle"></span>
+      <button class="sd-close" onclick="closeStat()">×</button>
+    </div>
+    <div id="sdList"></div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════
+     SEKCIA 2 – PONUKY
+════════════════════════════════════════ -->
+<div class="sec" id="secPonuky">
+  <div class="sec-wrap">
+
+    <!-- Formulár -->
+    <div class="pform">
+      <div class="pform-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+        </svg>
+        Zadať cenovú ponuku
+      </div>
+      <div class="pform-body">
+        <div class="pf">
+          <label>Projekt</label>
+          <div class="proj-search-wrap">
+            <input type="text" id="pProjQ" placeholder="Hľadať projekt…" oninput="onProjQ()" autocomplete="off">
+            <div class="proj-dropdown" id="pProjDrop"></div>
+          </div>
+          <div class="proj-selected" id="pProjSel">
+            <span id="pProjSelTxt"></span>
+            <button onclick="clearProjSel()">×</button>
+          </div>
+          <input type="hidden" id="pProjVal">
+        </div>
+        <div class="pf">
+          <label>Profesia</label>
+          <select id="pTyp">
+            <option value="">Vybrať…</option>
+            <option>Statika</option>
+            <option>PBS</option>
+            <option>ELI</option>
+            <option>ZTI</option>
+            <option>UK</option>
+            <option>VZT</option>
+            <option>Plyn</option>
+            <option>ASR</option>
+            <option>Iné</option>
+          </select>
+        </div>
+        <div class="pf">
+          <label>Poznámka</label>
+          <input type="text" id="pPoznamka" placeholder="Voliteľná poznámka…">
+        </div>
+        <div class="pf">
+          <label>Profesista / Externista</label>
+          <input type="text" id="pProfesista" placeholder="Ing. Kováč">
+        </div>
+        <div class="pf">
+          <label>Suma ponuky</label>
+          <div class="suma-w">
+            <span class="suma-pfx">€</span>
+            <input type="number" id="pSuma" placeholder="0" min="0" step="50">
+          </div>
+        </div>
+        <button class="btn-save" onclick="savePonuka()">Uložiť ponuku</button>
+      </div>
+    </div>
+
+    <!-- Filter ponúk -->
+    <div class="ponuky-filter-bar">
+      <div class="ponuky-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="fPonukyQ" placeholder="Filtrovať projekt…" oninput="onFPonukyQ()" autocomplete="off">
+        <div class="ponuky-dropdown" id="fPonukyDrop"></div>
+        <input type="hidden" id="fPonukyVal">
+      </div>
+      <div class="stav-btns">
+        <div class="sbtn active" onclick="setStav('all',this)">Všetky</div>
+        <div class="sbtn" onclick="setStav('cakam',this)">Čakám</div>
+        <div class="sbtn" onclick="setStav('prijata',this)">Prijaté</div>
+      </div>
+    </div>
+
+    <!-- Summary bar (zobrazí sa pri filtri projektu) -->
+    <div class="sum-bar hidden" id="sumBar">
+      <div class="sum-item"><div class="sum-val" id="sumCount">0</div><div class="sum-lbl">ponúk</div></div>
+      <div class="sum-item"><div class="sum-val" id="sumCakam">0</div><div class="sum-lbl">čakám</div></div>
+      <div class="sum-item"><div class="sum-val" id="sumVit">0 €</div><div class="sum-lbl">víťazné</div></div>
+    </div>
+
+    <!-- Budget bar -->
+    <div class="budget-bar hidden" id="budgetBar">
+      <div class="budget-top">
+        <span class="budget-title">💼 Rozpočet projektu</span>
+        <button class="budget-edit-btn" onclick="toggleBudgetEdit()">Upraviť</button>
+      </div>
+      <div class="budget-nums">
+        <div class="bn"><div class="bn-val" id="bnCiel">—</div><div class="bn-lbl">Cieľový</div></div>
+        <div class="bn"><div class="bn-val" id="bnVit">0 €</div><div class="bn-lbl">Víťazné</div></div>
+        <div class="bn"><div class="bn-val" id="bnZost">—</div><div class="bn-lbl">Zostatok</div></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+      <div class="budget-input-row hidden" id="budgetInputRow">
+        <input type="number" id="budgetInput" placeholder="Cieľový rozpočet €" min="0">
+        <button class="btn-primary" onclick="saveBudget()">Uložiť</button>
+      </div>
+    </div>
+
+    <!-- Zoznam ponúk -->
+    <div id="listPonuky">
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Zatiaľ žiadne ponuky
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SEKCIA 3 – ARCHÍV
+════════════════════════════════════════ -->
+<div class="sec" id="secArchiv">
+  <div class="sec-wrap">
+    <div class="archiv-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="archivQ" placeholder="Hľadať ukončený projekt…" oninput="renderArchiv()">
+    </div>
+    <div id="listArchiv">
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
+        Žiadne ukončené projekty
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay hidden" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Projekt</h3>
+    <div class="mfields">
+      <div class="mf"><label>Číslo projektu</label><input id="mCislo" placeholder="2024-031"></div>
+      <div class="mf"><label>Lopta u koho</label>
+        <select id="mLopta">
+          <option value="">—</option>
+          <option>PM</option><option>Projektant</option>
+          <option>Architekt</option><option>Projektant+Profesista</option>
+          <option>Profesista</option><option>Klient</option>
+          <option>Inžiniering</option><option>Šéf</option><option>Tomáš</option>
+        </select>
+      </div>
+      <div class="mf full"><label>Názov projektu</label><input id="mNazov" placeholder="Bytový dom Nitra…"></div>
+      <div class="mf full"><label>Fáza</label>
+        <select id="mFaza">
+          <option value="">—</option>
+          <option>Nezaradené</option>
+          <option>Územný development</option>
+          <option>Uzemnoplánovacia dokumentácia</option>
+          <option>Štúdia</option>
+          <option>Stavebný zámer</option>
+          <option>Čakanie – inžiniering zámeru</option>
+          <option>Stavebný projekt</option>
+          <option>Stavebný a realizačný projekt</option>
+          <option>Realizačný projekt</option>
+          <option>Čakanie – inžiniering projektu</option>
+          <option>Projekčná podpora pri realizácii</option>
+          <option>Autorský dozor</option>
+          <option>Projektový servis</option>
+          <option>Projektový servis pre inžiniering</option>
+          <option>Pozastavený</option>
+          <option>Ukončený</option>
+        </select>
+      </div>
+      <div class="mf"><label>Projektant</label><input id="mProjectant" placeholder="Novák J."></div>
+      <div class="mf"><label>Od kedy čaká</label><input type="date" id="mOdKedy"></div>
+      <div class="mf"><label>Deadline</label><input type="date" id="mDeadline"></div>
+      <div class="mf"><label>Akcia</label>
+        <select id="mAkcia"><option value="NIE">NIE</option><option value="ÁNO">ÁNO</option></select>
+      </div>
+      <div class="mf full"><label>Popis akcie / Poznámka</label>
+        <textarea id="mPoznamka" placeholder="Čo treba urobiť…"></textarea>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btn-ghost" onclick="closeModal()">Zrušiť</button>
+      <button class="btn-primary" onclick="saveProject()">Uložiť</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="ntab active" id="ntPrehled" onclick="goTab('Prehled')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+    </svg>
+    Prehľad
+  </div>
+  <div class="ntab" id="ntPonuky" onclick="goTab('Ponuky')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+    </svg>
+    Ponuky
+  </div>
+  <div class="ntab" id="ntArchiv" onclick="goTab('Archiv')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
+      <line x1="10" y1="12" x2="14" y2="12"/>
+    </svg>
+    Archív
+  </div>
+</nav>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────
+let projects  = [];
+let ponuky    = JSON.parse(localStorage.getItem('pmPonuky3') || '[]');
+let budgets   = JSON.parse(localStorage.getItem('pmBudgets') || '{}');
+let cfg       = JSON.parse(localStorage.getItem('pmCfg3')   || '{}');
+let stavFilter = 'all';
+let activeStat = null;
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (cfg.url) {
+    document.getElementById('cfgUrl').value = cfg.url;
+    syncData();
+  } else {
+    loadDemo();
+  }
+});
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+function goTab(name) {
+  ['Prehled','Ponuky','Archiv'].forEach(n => {
+    document.getElementById('sec'+n).classList.toggle('active', n === name);
+    document.getElementById('nt'+n).classList.toggle('active', n === name);
+  });
+  if (name === 'Archiv') renderArchiv();
+}
+
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+function toggleCfg() { document.getElementById('cfgWrap').classList.toggle('hidden'); }
+
+function saveCfg() {
+  cfg = { url: document.getElementById('cfgUrl').value.trim() };
+  localStorage.setItem('pmCfg3', JSON.stringify(cfg));
+  document.getElementById('cfgWrap').classList.add('hidden');
+  showToast('Uložené – synchronizujem…', 'ok');
+  syncData();
+}
+
+// ── SYNC ──────────────────────────────────────────────────────────────────
+async function syncData() {
+  if (!cfg.url) { loadDemo(); return; }
+  const ico = document.getElementById('syncIco');
+  ico.classList.add('spin');
+  try {
+    // Load projekty
+    const r1 = await fetch(cfg.url + '?sheet=Projekty&t=' + Date.now());
+    const d1 = await r1.json();
+    if (d1.error) throw new Error(d1.error);
+    projects = parseRows(d1.values || []);
+
+    // Load ponuky
+    const r2 = await fetch(cfg.url + '?sheet=Cenov%C3%A9%20ponuky&t=' + Date.now());
+    const d2 = await r2.json();
+    if (!d2.error) ponuky = parsePonukyRows(d2.values || []);
+
+    renderAll();
+    renderPonuky();
+    showToast(projects.length + ' projektov', 'ok');
+  } catch(e) {
+    showToast('Chyba: ' + e.message, 'err');
+    if (!projects.length) loadDemo();
+  } finally { ico.classList.remove('spin'); }
+}
+
+function parsePonukyRows(rows) {
+  if (rows.length < 2) return [];
+  return rows.slice(1).filter(r => r[0]).map(r => ({
+    id:        String(r[0]),
+    projekt:   String(r[1]||''),
+    nazovProj: String(r[2]||''),
+    typ:       String(r[3]||''),
+    profesista:String(r[4]||''),
+    suma:      r[5] ? parseFloat(r[5]) : null,
+    stav:      String(r[6]||'cakam'),
+    winner:    r[7] === true || r[7] === 'true' || r[7] === 'TRUE',
+    datum:     String(r[8]||''),
+    poznamka:  String(r[9]||''),
+  }));
+}
+
+function parseRows(rows) {
+  if (rows.length < 2) return [];
+  const t = new Date(); t.setHours(0,0,0,0);
+  return rows.slice(2).filter(r => r[0] && String(r[0]).trim()).map(r => {
+    const ok = parseDate(r[5]);
+    const dl = parseDate(r[6]);
+    return {
+      cislo:     String(r[0]||'').trim(),
+      nazov:     String(r[1]||'').trim(),
+      faza:      String(r[2]||'').trim(),
+      projektant:String(r[3]||'').trim(),
+      lopta:     String(r[4]||'').trim(),
+      odKedy: ok, dniCaka: ok ? Math.floor((t-ok)/86400000) : null,
+      deadline: dl, dniDead: dl ? Math.floor((dl-t)/86400000) : null,
+      akcia:     String(r[9]||'NIE').trim(),
+      opisAkcie: String(r[10]||'').trim(),
+      poznamka:  String(r[11]||'').trim(),
+    };
+  });
+}
+
+function parseDate(v) {
+  if (!v || String(v).trim() === '') return null;
+  if (String(v).includes('T')) return new Date(v);
+  const dm = String(v).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (dm) return new Date(+dm[3], +dm[2]-1, +dm[1]);
+  const ym = String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ym) return new Date(+ym[1], +ym[2]-1, +ym[3]);
+  if (!isNaN(v) && +v > 40000) return new Date(Math.round((+v-25569)*86400000));
+  const d = new Date(v); return isNaN(d) ? null : d;
+}
+
+// ── DEMO ──────────────────────────────────────────────────────────────────
+function loadDemo() {
+  const t = new Date(); t.setHours(0,0,0,0);
+  const d = n => { const x=new Date(t); x.setDate(x.getDate()+n); return x; };
+  projects = [
+    {cislo:'24-001',nazov:'Bytový dom Nitra',faza:'Stavebný projekt',projektant:'Novák',lopta:'Profesista',odKedy:d(-9),dniCaka:9,deadline:d(5),dniDead:5,akcia:'ÁNO',opisAkcie:'Čakám na statický posudok',poznamka:''},
+    {cislo:'24-002',nazov:'RD Trenčín – Kubíčková',faza:'Čakanie – inžiniering zámeru',projektant:'Horváth',lopta:'Inžiniering',odKedy:d(-22),dniCaka:22,deadline:d(28),dniDead:28,akcia:'NIE',opisAkcie:'',poznamka:''},
+    {cislo:'24-003',nazov:'SSD Bratislava – Lamač',faza:'Stavebný zámer',projektant:'Novák',lopta:'PM',odKedy:d(0),dniCaka:0,deadline:d(3),dniDead:3,akcia:'ÁNO',opisAkcie:'Dokončiť bilančné výpočty',poznamka:''},
+    {cislo:'24-004',nazov:'Interiér Trnava',faza:'Štúdia',projektant:'Horváth',lopta:'Klient',odKedy:d(-4),dniCaka:4,deadline:d(2),dniDead:2,akcia:'ÁNO',opisAkcie:'Odsúhlasenie štúdie',poznamka:''},
+    {cislo:'23-001',nazov:'Školka Viničné',faza:'Ukončený',projektant:'Erik',lopta:'',odKedy:null,dniCaka:null,deadline:null,dniDead:null,akcia:'NIE',opisAkcie:'',poznamka:''},
+    {cislo:'23-002',nazov:'BD Sv Anton',faza:'Ukončený',projektant:'',lopta:'',odKedy:null,dniCaka:null,deadline:null,dniDead:null,akcia:'NIE',opisAkcie:'',poznamka:''},
+  ];
+  renderAll();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function renderAll() {
+  const active = projects.filter(p => p.faza !== 'Ukončený' && p.faza !== 'Pozastavený');
+  const hori   = active.filter(isHori);
+  const cakam  = active.filter(p => p.lopta && !jeUMna(p.lopta));
+  const deadl  = active.filter(p => p.dniDead != null && p.dniDead <= 7).sort((a,b)=>a.dniDead-b.dniDead);
+  const pozast = projects.filter(p => p.faza === 'Pozastavený');
+
+  document.getElementById('vHori').textContent        = hori.length;
+  document.getElementById('vCakam').textContent       = cakam.length;
+  document.getElementById('vDeadline').textContent    = deadl.length;
+  document.getElementById('vAktivne').textContent     = active.length;
+  document.getElementById('vPozastavene').textContent = pozast.length;
+
+  if (activeStat) toggleStat(activeStat, true);
+}
+
+function isHori(p) {
+  if (p.faza === 'Pozastavený' || p.faza === 'Ukončený') return false;
+  if (p.akcia === 'ÁNO' && jeUMna(p.lopta)) return true;
+  if (p.dniDead != null && p.dniDead <= 3)   return true;
+  if (p.dniCaka != null && p.dniCaka > 14)   return true;
+  return false;
+}
+
+// ── STAT DETAIL ───────────────────────────────────────────────────────────
+function toggleStat(type, forceOpen) {
+  if (activeStat === type && !forceOpen) { closeStat(); return; }
+  activeStat = type;
+  ['stHori','stCakam','stDeadline','stAktivne','stPozastavene'].forEach(id =>
+    document.getElementById(id).classList.remove('active'));
+  const map = {hori:'stHori',cakam:'stCakam',deadline:'stDeadline',aktivne:'stAktivne',pozastavene:'stPozastavene'};
+  document.getElementById(map[type]).classList.add('active');
+
+  const active = projects.filter(p => p.faza !== 'Ukončený' && p.faza !== 'Pozastavený');
+  let list, title;
+  if (type==='hori')         { list=active.filter(isHori); title='🔥 Horí dnes'; }
+  else if (type==='cakam')   { list=active.filter(p=>p.lopta&&!jeUMna(p.lopta)); title='⏳ Čakám na odpoveď'; }
+  else if (type==='deadline'){ list=active.filter(p=>p.dniDead!=null&&p.dniDead<=7).sort((a,b)=>a.dniDead-b.dniDead); title='📅 Deadline tento týždeň'; }
+  else if (type==='aktivne') { list=active; title='📋 Aktívne projekty'; }
+  else                       { list=projects.filter(p=>p.faza==='Pozastavený'); title='⏸️ Pozastavené'; }
+
+  document.getElementById('sdTitle').textContent = title + ' (' + list.length + ')';
+  document.getElementById('sdList').innerHTML = list.length
+    ? list.map(prowHtml).join('')
+    : '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Žiadne projekty</div>';
+  document.getElementById('statDetail').classList.remove('hidden');
+}
+
+function closeStat() {
+  activeStat = null;
+  document.getElementById('statDetail').classList.add('hidden');
+  ['stHori','stCakam','stDeadline','stAktivne','stPozastavene'].forEach(id =>
+    document.getElementById(id).classList.remove('active'));
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────────
+function doSearch() {
+  const q     = document.getElementById('searchQ').value.toLowerCase().trim();
+  const faza  = document.getElementById('searchFaza').value;
+  const lopta = document.getElementById('searchLopta').value;
+  const el    = document.getElementById('searchResults');
+
+  if (!q && !faza && !lopta) { el.style.display='none'; return; }
+
+  const res = projects.filter(p => {
+    if (p.faza === 'Ukončený') return false;
+    const mq = !q || p.cislo.toLowerCase().includes(q) || p.nazov.toLowerCase().includes(q) || (p.projektant||'').toLowerCase().includes(q) || (p.opisAkcie||'').toLowerCase().includes(q);
+    return mq && (!faza||p.faza===faza) && (!lopta||p.lopta===lopta);
+  });
+  el.style.display = 'block';
+  el.innerHTML = res.length
+    ? res.map(prowHtml).join('')
+    : '<div style="padding:12px;text-align:center;font-size:12px;color:var(--text3)">Žiadne výsledky</div>';
+}
+
+// ── PROJECT ROW HTML ───────────────────────────────────────────────────────
+// "lopta u mňa" = PM alebo prázdne
+function jeUMna(lopta) {
+  return !lopta || lopta === 'PM';
+}
+
+function prowHtml(p) {
+  const dc = p.dniDead!=null&&p.dniDead<=0?'red':p.dniDead!=null&&p.dniDead<=3?'orange':'muted';
+  const ds = p.dniDead!=null?(p.dniDead<=0?'Dnes!':p.dniDead+'d'):(p.dniCaka!=null&&p.dniCaka>7?p.dniCaka+'d←':'');
+  return `<div class="prow" onclick="openEdit('${p.cislo}')">
+    <div class="prow-num">${p.cislo}</div>
+    <div class="prow-body">
+      <div class="prow-name">${p.nazov}</div>
+      <div class="prow-tags">
+        ${p.faza?`<span class="tag tag-faza">${p.faza}</span>`:''}
+        ${!jeUMna(p.lopta)?`<span class="tag tag-lopta">@ ${p.lopta}</span>`:''}
+        ${p.akcia==='ÁNO'&&p.opisAkcie?`<span class="tag tag-akcia">⚡ ${p.opisAkcie.slice(0,36)}${p.opisAkcie.length>36?'…':''}</span>`:''}
+      </div>
+    </div>
+    <div class="prow-days ${dc}">${ds}</div>
+  </div>`;
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = 'Nový projekt';
+  ['mCislo','mNazov','mProjectant','mPoznamka'].forEach(id=>document.getElementById(id).value='');
+  ['mFaza','mLopta'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mAkcia').value='NIE';
+  document.getElementById('mOdKedy').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mDeadline').value='';
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function openEdit(cislo) {
+  const p = projects.find(x=>x.cislo===cislo); if (!p) return;
+  document.getElementById('modalTitle').textContent = p.cislo;
+  document.getElementById('mCislo').value      = p.cislo;
+  document.getElementById('mNazov').value      = p.nazov;
+  document.getElementById('mFaza').value       = p.faza;
+  document.getElementById('mProjectant').value = p.projektant;
+  document.getElementById('mLopta').value      = p.lopta;
+  document.getElementById('mAkcia').value      = p.akcia;
+  document.getElementById('mPoznamka').value   = p.opisAkcie||p.poznamka||'';
+  if (p.odKedy)   document.getElementById('mOdKedy').value   = p.odKedy.toISOString().split('T')[0];
+  if (p.deadline) document.getElementById('mDeadline').value = p.deadline.toISOString().split('T')[0];
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+function saveProject() {
+  const cislo = document.getElementById('mCislo').value.trim();
+  if (!cislo) { showToast('Zadaj číslo projektu','err'); return; }
+  const t=new Date(); t.setHours(0,0,0,0);
+  const ok=document.getElementById('mOdKedy').value;
+  const dl=document.getElementById('mDeadline').value;
+  const odKedy=ok?new Date(ok):null;
+  const deadline=dl?new Date(dl):null;
+  const proj = {
+    cislo, nazov:document.getElementById('mNazov').value,
+    faza:document.getElementById('mFaza').value,
+    projektant:document.getElementById('mProjectant').value,
+    lopta:document.getElementById('mLopta').value,
+    odKedy, dniCaka:odKedy?Math.floor((t-odKedy)/86400000):null,
+    deadline, dniDead:deadline?Math.floor((deadline-t)/86400000):null,
+    akcia:document.getElementById('mAkcia').value,
+    opisAkcie:document.getElementById('mPoznamka').value, poznamka:'',
+  };
+  const idx=projects.findIndex(p=>p.cislo===cislo);
+  const isNew=idx<0;
+  if (isNew) projects.push(proj); else projects[idx]=proj;
+  renderAll(); closeModal();
+  showToast('Projekt '+cislo+' ukladám…','ok');
+  if (cfg.url) saveToSheets(proj, isNew);
+}
+
+async function savePonukaToSheets(p) {
+  if (!cfg.url) return;
+  const row = [p.id, p.projekt, p.nazovProj, p.typ, p.profesista,
+               p.suma||'', p.stav, p.winner, p.datum, p.poznamka||''];
+  try {
+    const res = await fetch(cfg.url, {method:'POST',
+      body:JSON.stringify({action:'append', sheet:'Cenové ponuky', row})});
+    const d = await res.json();
+    if (d.ok) showToast('Ponuka uložená ✓','ok');
+    else showToast('Chyba: '+(d.error||''),'err');
+  } catch(e) { showToast('Chyba zápisu','err'); }
+}
+
+async function updatePonukaInSheets(p) {
+  if (!cfg.url) return;
+  const row = [p.id, p.projekt, p.nazovProj, p.typ, p.profesista,
+               p.suma||'', p.stav, p.winner, p.datum, p.poznamka||''];
+  try {
+    await fetch(cfg.url, {method:'POST',
+      body:JSON.stringify({action:'update', sheet:'Cenové ponuky', cislo:p.id, row})});
+  } catch(e) {}
+}
+
+async function saveToSheets(proj, isNew) {
+  if (!cfg.url) return;
+  const row = [
+    proj.cislo,proj.nazov,proj.faza,proj.projektant,proj.lopta,
+    proj.odKedy?proj.odKedy.toISOString().split('T')[0]:'',
+    proj.deadline?proj.deadline.toISOString().split('T')[0]:'',
+    '','',proj.akcia,proj.opisAkcie,proj.poznamka
+  ];
+  try {
+    const res = await fetch(cfg.url, {method:'POST', body:JSON.stringify({action:isNew?'append':'update',row,cislo:proj.cislo})});
+    const d = await res.json();
+    if (d.ok) showToast('Uložené v Sheets ✓','ok');
+    else showToast('Chyba: '+(d.error||''),'err');
+  } catch(e) { showToast('Chyba zápisu','err'); }
+}
+
+// ── PONUKY – PROJEKT SEARCH ───────────────────────────────────────────────
+function onProjQ() {
+  const q  = document.getElementById('pProjQ').value.toLowerCase().trim();
+  const el = document.getElementById('pProjDrop');
+  document.getElementById('pProjVal').value='';
+  document.getElementById('pProjSel').classList.remove('show');
+  if (!q) { el.style.display='none'; return; }
+  const hits=projects.filter(p=>p.faza!=='Ukončený'&&(p.cislo.toLowerCase().includes(q)||p.nazov.toLowerCase().includes(q))).slice(0,8);
+  if (!hits.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML=hits.map(p=>`<div class="proj-dropdown-item" onclick="selectProj('${p.cislo}','${p.nazov.replace(/'/g,"&#39;")}')"><span style="color:var(--text3);margin-right:6px">${p.cislo}</span>${p.nazov}</div>`).join('');
+}
+
+function selectProj(cislo, nazov) {
+  document.getElementById('pProjVal').value=cislo;
+  document.getElementById('pProjQ').value='';
+  document.getElementById('pProjDrop').style.display='none';
+  document.getElementById('pProjSelTxt').textContent=cislo+' – '+nazov;
+  document.getElementById('pProjSel').classList.add('show');
+}
+
+function clearProjSel() {
+  document.getElementById('pProjVal').value='';
+  document.getElementById('pProjQ').value='';
+  document.getElementById('pProjSel').classList.remove('show');
+}
+
+// ── PONUKY – FILTER SEARCH ────────────────────────────────────────────────
+function onFPonukyQ() {
+  const q  = document.getElementById('fPonukyQ').value.toLowerCase().trim();
+  const el = document.getElementById('fPonukyDrop');
+  if (!q) {
+    el.style.display='none';
+    document.getElementById('fPonukyVal').value='';
+    renderPonuky(); return;
+  }
+  const hits=projects.filter(p=>p.cislo.toLowerCase().includes(q)||p.nazov.toLowerCase().includes(q)).slice(0,6);
+  if (!hits.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML=hits.map(p=>`<div class="proj-dropdown-item" onclick="selectFPonuky('${p.cislo}','${p.nazov.replace(/'/g,"&#39;")}')"><span style="color:var(--text3);margin-right:6px">${p.cislo}</span>${p.nazov}</div>`).join('');
+}
+
+function selectFPonuky(cislo, nazov) {
+  document.getElementById('fPonukyVal').value=cislo;
+  document.getElementById('fPonukyQ').value=cislo+' – '+nazov;
+  document.getElementById('fPonukyDrop').style.display='none';
+  renderPonuky();
+}
+
+// ── PONUKY – SAVE ─────────────────────────────────────────────────────────
+function setStav(f, btn) {
+  stavFilter=f;
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPonuky();
+}
+
+function savePonuka() {
+  const projekt=document.getElementById('pProjVal').value;
+  const typ=document.getElementById('pTyp').value;
+  const prof=document.getElementById('pProfesista').value.trim();
+  const suma=document.getElementById('pSuma').value;
+  const pozn=document.getElementById('pPoznamka').value.trim();
+  if (!projekt) { showToast('Vyber projekt','err'); return; }
+  if (!typ)     { showToast('Vyber typ práce','err'); return; }
+  if (!prof)    { showToast('Zadaj profesista','err'); return; }
+  const proj=projects.find(p=>p.cislo===projekt);
+  ponuky.unshift({
+    id:Date.now(), projekt, nazovProj:proj?.nazov||'',
+    typ, profesista:prof,
+    suma:suma?parseFloat(suma):null,
+    poznamka:pozn,
+    stav:suma?'prijata':'cakam',
+    winner:false,
+    datum:new Date().toISOString().split('T')[0],
+  });
+  localStorage.setItem('pmPonuky3',JSON.stringify(ponuky));
+  clearProjSel();
+  document.getElementById('pTyp').value='';
+  document.getElementById('pProfesista').value='';
+  document.getElementById('pSuma').value='';
+  document.getElementById('pPoznamka').value='';
+  // auto-filter to this project
+  document.getElementById('fPonukyVal').value=projekt;
+  document.getElementById('fPonukyQ').value=projekt+' – '+(proj?.nazov||'');
+  renderPonuky();
+  showToast('Ponuka ukladám…','ok');
+  if (cfg.url) savePonukaToSheets(ponuky[0]);
+}
+
+function toggleWinner(id) {
+  const p=ponuky.find(x=>x.id===id); if (!p) return;
+  if (!p.winner) {
+    ponuky.forEach(x=>{if(x.projekt===p.projekt&&x.typ===p.typ){x.winner=false; if(cfg.url)updatePonukaInSheets(x);}});
+    p.winner=true; p.stav='prijata';
+  } else { p.winner=false; p.stav=p.suma?'prijata':'cakam'; }
+  localStorage.setItem('pmPonuky3',JSON.stringify(ponuky));
+  if (cfg.url) updatePonukaInSheets(p);
+  renderPonuky();
+}
+
+function cycleStav(id) {
+  const p=ponuky.find(x=>x.id===id); if (!p||p.winner) return;
+  p.stav=p.stav==='cakam'?'prijata':'cakam';
+  localStorage.setItem('pmPonuky3',JSON.stringify(ponuky));
+  if (cfg.url) updatePonukaInSheets(p);
+  renderPonuky();
+}
+
+function toggleBudgetEdit() { document.getElementById('budgetInputRow').classList.toggle('hidden'); }
+
+function saveBudget() {
+  const proj=document.getElementById('fPonukyVal').value;
+  if (!proj) { showToast('Vyber projekt','err'); return; }
+  const val=parseFloat(document.getElementById('budgetInput').value);
+  if (!val) { showToast('Zadaj sumu','err'); return; }
+  budgets[proj]=val;
+  localStorage.setItem('pmBudgets',JSON.stringify(budgets));
+  document.getElementById('budgetInputRow').classList.add('hidden');
+  renderPonuky();
+  showToast('Rozpočet uložený','ok');
+}
+
+function renderPonuky() {
+  const projFilter=document.getElementById('fPonukyVal').value;
+  let byProj=projFilter?ponuky.filter(p=>p.projekt===projFilter):ponuky;
+  let filtered=stavFilter==='all'?byProj:byProj.filter(p=>p.stav===stavFilter||(stavFilter==='prijata'&&(p.stav==='prijata'||p.winner)));
+
+  // summary bar
+  const sb=document.getElementById('sumBar');
+  if (projFilter&&byProj.length) {
+    document.getElementById('sumCount').textContent=byProj.length;
+    document.getElementById('sumCakam').textContent=byProj.filter(p=>p.stav==='cakam').length;
+    const wsum=byProj.filter(p=>p.winner&&p.suma).reduce((s,p)=>s+p.suma,0);
+    document.getElementById('sumVit').textContent=wsum>0?wsum.toLocaleString('sk-SK')+' €':'0 €';
+    sb.classList.remove('hidden');
+  } else sb.classList.add('hidden');
+
+  // budget bar
+  const bb=document.getElementById('budgetBar');
+  if (projFilter) {
+    const wsum=byProj.filter(p=>p.winner&&p.suma).reduce((s,p)=>s+p.suma,0);
+    const ciel=budgets[projFilter]||null;
+    document.getElementById('bnVit').textContent=wsum>0?wsum.toLocaleString('sk-SK')+' €':'0 €';
+    if (ciel) {
+      document.getElementById('bnCiel').textContent=ciel.toLocaleString('sk-SK')+' €';
+      const zost=ciel-wsum;
+      const ze=document.getElementById('bnZost');
+      ze.textContent=Math.abs(zost).toLocaleString('sk-SK')+' €'+(zost<0?' 🔴':'');
+      ze.className='bn-val '+(zost<0?'over':'under');
+      const pct=Math.min((wsum/ciel)*100,100);
+      document.getElementById('progFill').style.width=pct+'%';
+      document.getElementById('progFill').className='progress-fill'+(zost<0?' over':'');
+    } else {
+      document.getElementById('bnCiel').textContent='—';
+      document.getElementById('bnZost').textContent='—';
+      document.getElementById('progFill').style.width='0%';
+    }
+    bb.classList.remove('hidden');
+  } else bb.classList.add('hidden');
+
+  const el=document.getElementById('listPonuky');
+  if (!filtered.length) {
+    el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Žiadne ponuky</div>';
+    return;
+  }
+
+  if (!projFilter) {
+    // group by project
+    const grps={};
+    filtered.forEach(p=>{if(!grps[p.projekt])grps[p.projekt]=[];grps[p.projekt].push(p);});
+    el.innerHTML=Object.entries(grps).map(([cislo,items])=>{
+      const proj=projects.find(p=>p.cislo===cislo);
+      const wsum=items.filter(p=>p.winner&&p.suma).reduce((s,p)=>s+p.suma,0);
+      return `<div style="margin-bottom:12px">
+        <div onclick="selectFPonuky('${cislo}','${(proj?.nazov||'').replace(/'/g,"&#39;")}')"
+          style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;
+          background:var(--bg3);border:1px solid var(--border);border-radius:7px;margin-bottom:5px;cursor:pointer">
+          <span style="font-size:11px;font-weight:600;color:var(--blue)">${cislo} – ${proj?.nazov||''}</span>
+          ${wsum>0?`<span style="font-size:11px;font-weight:600;color:var(--green)">★ ${wsum.toLocaleString('sk-SK')} €</span>`:''}
+        </div>
+        ${renderByTyp(items)}
+      </div>`;
+    }).join('');
+  } else {
+    el.innerHTML=renderByTyp(filtered);
+  }
+}
+
+function renderByTyp(items) {
+  const byTyp={};
+  items.forEach(p=>{if(!byTyp[p.typ])byTyp[p.typ]=[];byTyp[p.typ].push(p);});
+  return Object.entries(byTyp).map(([typ,list])=>`
+    <div class="typ-group">
+      <div class="typ-label">${typ}</div>
+      ${list.sort((a,b)=>(b.winner-a.winner)||((a.suma||999999)-(b.suma||999999))).map(ponukaHtml).join('')}
+    </div>`).join('');
+}
+
+function ponukaHtml(p) {
+  const sl={cakam:'stav-cakam',prijata:'stav-prijata'};
+  return `<div class="ponuky-card ${p.winner?'winner':''}" onclick="cycleStav(${p.id})">
+    <button class="win-btn ${p.winner?'active':''}" onclick="event.stopPropagation();toggleWinner(${p.id})">★</button>
+    <div class="pc-info">
+      <div class="pc-who">${p.profesista}</div>
+      <div class="pc-meta">${p.datum}${p.poznamka ? ' · ' + p.poznamka : ''}</div>
+    </div>
+    <div class="pc-right">
+      <div class="pc-suma ${p.suma?'':'none'}">${p.suma?p.suma.toLocaleString('sk-SK')+' €':'čakám'}</div>
+      <div class="pc-stav ${p.winner?'stav-winner':sl[p.stav]||'stav-cakam'}">${p.winner?'★ Víťaz':p.stav==='cakam'?'Čakám':'Prijatá'}</div>
+    </div>
+  </div>`;
+}
+
+// ── ARCHÍV ────────────────────────────────────────────────────────────────
+function renderArchiv() {
+  const q=document.getElementById('archivQ').value.toLowerCase().trim();
+  const list=projects.filter(p=>p.faza==='Ukončený'&&(!q||p.cislo.toLowerCase().includes(q)||p.nazov.toLowerCase().includes(q)));
+  const el=document.getElementById('listArchiv');
+  if (!list.length) {
+    el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>Žiadne ukončené projekty</div>';
+    return;
+  }
+  el.innerHTML=list.map(p=>`<div class="archiv-card" onclick="openEdit('${p.cislo}')">
+    <div class="prow-num">${p.cislo}</div>
+    <div class="prow-body">
+      <div class="prow-name">${p.nazov}</div>
+      <div class="prow-tags">
+        ${p.projektant?`<span class="tag tag-faza">${p.projektant}</span>`:''}
+      </div>
+    </div>
+    <div style="font-size:18px;color:var(--text3)">✓</div>
+  </div>`).join('');
+}
+
+// ── PONUKY – SHEETS SYNC ──────────────────────────────────────────────────
+async function savePonukaToSheets(p) {
+  if (!cfg.url) return;
+  const row = [String(p.id), p.projekt, p.nazovProj, p.typ, p.profesista,
+               p.suma||'', p.stav, p.winner?'TRUE':'FALSE', p.datum, p.poznamka||''];
+  try {
+    const res = await fetch(cfg.url, {method:'POST',
+      body:JSON.stringify({action:'append', sheet:'Cenové ponuky', row})});
+    const d = await res.json();
+    if (d.ok) showToast('Ponuka uložená ✓','ok');
+    else showToast('Chyba zápisu','err');
+  } catch(e) { showToast('Chyba zápisu','err'); }
+}
+
+async function updatePonukaInSheets(p) {
+  if (!cfg.url) return;
+  const row = [String(p.id), p.projekt, p.nazovProj, p.typ, p.profesista,
+               p.suma||'', p.stav, p.winner?'TRUE':'FALSE', p.datum, p.poznamka||''];
+  try {
+    await fetch(cfg.url, {method:'POST',
+      body:JSON.stringify({action:'update', sheet:'Cenové ponuky', cislo:String(p.id), row})});
+  } catch(e) {}
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function showToast(msg,type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type;
+  void t.offsetWidth; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>

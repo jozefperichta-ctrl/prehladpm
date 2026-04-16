@@ -2544,54 +2544,63 @@ function renderFronty() {
     </div>`;
   }).join('');
 
-  // Projekty bez projektanta (bez plánu alebo vo fronte)
-  const vsetkyCisla = new Set();
-  Object.values(fronty).forEach(f => f.forEach(i => vsetkyCisla.add(i.cislo)));
-  Object.values(plany).forEach((plan, idx) => {
-    const cislo = Object.keys(plany)[idx];
-    if (plan?.as || plan?.sz || plan?.ps) vsetkyCisla.add(cislo);
-  });
-  // Tiež pridaj plánované
+  // Projekty bez projektanta – zobraz všetky aktívne projekty
+  // Fázy ktoré už sú vo fronte alebo naplánované = zobraz ako "zaradené"
+  const vseFronty = {};
+  Object.entries(fronty).forEach(([osoba, f]) => f.forEach(i => {
+    if (!vseFronty[i.cislo]) vseFronty[i.cislo] = {};
+    vseFronty[i.cislo][i.typ] = osoba;
+  }));
+  const vsePlany = {};
   Object.keys(plany).forEach(cislo => {
     const p = plany[cislo];
-    if (p?.as || p?.sz || p?.ps) vsetkyCisla.add(cislo);
+    if (!vsePlany[cislo]) vsePlany[cislo] = {};
+    if (p?.as) vsePlany[cislo].as = p.as.architekt;
+    if (p?.sz) vsePlany[cislo].sz = p.sz.projektant;
+    if (p?.ps) vsePlany[cislo].ps = p.ps.projektant;
   });
 
-  const bezProjektanta = projects.filter(p =>
-    p.faza !== 'Ukončený' && p.faza !== 'Pozastavený' && !vsetkyCisla.has(p.cislo)
-  );
+  const aktivne = projects.filter(p => p.faza !== 'Ukončený' && p.faza !== 'Pozastavený');
 
-  if (!bezProjektanta.length) {
-    el2.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">Všetky projekty sú zaradené.</div>';
+  if (!aktivne.length) {
+    el2.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">Žiadne aktívne projekty.</div>';
   } else {
-    el2.innerHTML = bezProjektanta.map(p => `
-      <div class="plan-proj-card" data-cislo="${p.cislo}">
+    el2.innerHTML = aktivne.map(p => {
+      const fFronty = vseFronty[p.cislo] || {};
+      const fPlany  = vsePlany[p.cislo]  || {};
+      const typLabels = {as:'AŠ', sz:'SZ', ps:'PS'};
+
+      const buttons = ['as','sz','ps'].map(typ => {
+        const osoba = fFronty[typ] || fPlany[typ];
+        if (osoba) {
+          return `<span style="background:var(--grn-bg);color:var(--green);border:1px solid var(--grn-bd);
+            border-radius:6px;padding:4px 10px;font-size:11px;">${typ.toUpperCase()} – ${osoba}</span>`;
+        }
+        return `<button onclick="openFrontaModal('${p.cislo}','${typ}')"
+          style="background:none;border:1px solid var(--border);border-radius:6px;
+          padding:4px 10px;font-size:11px;color:var(--text2);cursor:pointer;">
+          + ${typ.toUpperCase()}
+        </button>`;
+      }).join('');
+
+      return `<div class="plan-proj-card" data-cislo="${p.cislo}">
         <div class="prow-num">${p.cislo}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nazov}</div>
           <div style="font-size:11px;color:var(--text3);">${p.faza}</div>
         </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;">
-          ${['as','sz','ps'].map(typ => `
-            <button onclick="openFrontaModal('${p.cislo}','${typ}')"
-              style="background:none;border:1px solid var(--border);border-radius:6px;
-              padding:4px 10px;font-size:11px;color:var(--text2);cursor:pointer;">
-              + ${typ.toUpperCase()}
-            </button>`).join('')}
-        </div>
-      </div>`).join('');
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">${buttons}</div>
+      </div>`;
+    }).join('');
   }
 }
 
-// Modal pre pridanie do fronty – namiesto prompt
 function openFrontaModal(cislo, typ) {
-  const proj = projects.find(p => p.cislo===cislo);
   const typLabels = {as:'AŠ', sz:'SZ', ps:'PS'};
   const osoby = typ==='as'
     ? CLENOVIA.filter(c => c.typ==='APS')
     : CLENOVIA;
 
-  // Vytvor inline dropdown priamo v karte
   const elId = `fm-${cislo}-${typ}`;
   const existing = document.getElementById(elId);
   if (existing) { existing.remove(); return; }
@@ -2599,26 +2608,100 @@ function openFrontaModal(cislo, typ) {
   const kontainer = document.querySelector(`[data-cislo="${cislo}"]`);
   if (!kontainer) return;
 
+  const plan = plany[cislo]?.[typ] || plany[cislo]?.as || {};
+
   const dropdown = document.createElement('div');
   dropdown.id = elId;
-  dropdown.style.cssText = 'margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;';
-  dropdown.innerHTML = `<span style="font-size:11px;color:var(--text2);line-height:28px;">${typLabels[typ]} →</span>` +
-    osoby.map(c => `
-      <button onclick="pridajDoFrontyA('${c.id}','${cislo}','${typ}')"
-        style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;
-        padding:4px 10px;font-size:11px;cursor:pointer;color:var(--text2);">${c.id}</button>
-    `).join('') +
-    `<button onclick="document.getElementById('${elId}').remove()"
-      style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;">×</button>`;
+  dropdown.style.cssText = 'margin-top:8px;padding:10px;background:var(--bg3);border-radius:8px;';
+
+  const isAS = typ === 'as';
+  const weekFields = isAS ? `
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        Kôl: <input type="number" id="${elId}-kola" value="${plan.kola||2}" min="1" max="4"
+          style="width:44px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;">
+      </label>
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        Návrh/kolo: <input type="number" id="${elId}-navrh" value="${plan.navrh||1}" min="1" max="2"
+          style="width:44px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+      </label>
+    </div>` : `
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        F1: <input type="number" id="${elId}-f1" value="${plan.f1||2}" min="1" max="3"
+          style="width:40px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+      </label>
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        F3: <input type="number" id="${elId}-f3" value="${plan.f3||2}" min="1" max="3"
+          style="width:40px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+      </label>
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        F4: <input type="number" id="${elId}-f4" value="${plan.f4||2}" min="1" max="3"
+          style="width:40px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+      </label>
+    </div>`;
+
+  dropdown.innerHTML = `
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">
+      ${typLabels[typ]} – vyber projektanta:
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      ${osoby.map(c => `
+        <button id="${elId}-btn-${c.id}" onclick="selectFrontaOsoba('${cislo}','${typ}','${c.id}','${elId}')"
+          style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;
+          padding:4px 10px;font-size:11px;cursor:pointer;color:var(--text2);">${c.id}</button>
+      `).join('')}
+      <button onclick="document.getElementById('${elId}').remove()"
+        style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;">×</button>
+    </div>
+    ${weekFields}
+    <div style="margin-top:8px;">
+      <button onclick="potvrditFrontu('${cislo}','${typ}','${elId}')"
+        style="background:var(--text);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;cursor:pointer;">
+        Potvrdiť
+      </button>
+    </div>`;
 
   kontainer.appendChild(dropdown);
 }
 
-function pridajDoFrontyA(osoba, cislo, typ) {
+function selectFrontaOsoba(cislo, typ, osoba, elId) {
+  document.querySelectorAll(`[id^="${elId}-btn-"]`).forEach(b => {
+    b.style.background = 'var(--bg2)';
+    b.style.borderColor = 'var(--border)';
+    b.style.color = 'var(--text2)';
+  });
+  const btn = document.getElementById(`${elId}-btn-${osoba}`);
+  if (btn) {
+    btn.style.background = 'var(--text)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--text)';
+  }
+  document.getElementById(elId)._osoba = osoba;
+}
+
+function potvrditFrontu(cislo, typ, elId) {
+  const el = document.getElementById(elId);
+  const osoba = el?._osoba;
+  if (!osoba) { showToast('Vyber projektanta','err'); return; }
+
+  // Ulož nastavenia fáz
+  if (!plany[cislo]) plany[cislo] = {};
+  if (typ === 'as') {
+    const kola  = parseInt(document.getElementById(`${elId}-kola`)?.value)||2;
+    const navrh = parseInt(document.getElementById(`${elId}-navrh`)?.value)||1;
+    plany[cislo].as = { ...(plany[cislo].as||{}), architekt: osoba, kola, navrh };
+  } else {
+    const f1 = parseInt(document.getElementById(`${elId}-f1`)?.value)||2;
+    const f3 = parseInt(document.getElementById(`${elId}-f3`)?.value)||2;
+    const f4 = parseInt(document.getElementById(`${elId}-f4`)?.value)||2;
+    plany[cislo][typ] = { ...(plany[cislo][typ]||{}), projektant: osoba, f1, f3, f4, f5: true };
+  }
+  localStorage.setItem('pmPlany', JSON.stringify(plany));
+
   pridajDoFronty(osoba, cislo, typ);
-  const elId = `fm-${cislo}-${typ}`;
-  document.getElementById(elId)?.remove();
-  showToast(`${cislo} → ${osoba}`,'ok');
+  el.remove();
+  showToast(`${cislo} → ${osoba} (${typ.toUpperCase()})`, 'ok');
 }
 
 // ── SIMULÁCIA ─────────────────────────────────────────────────────────────

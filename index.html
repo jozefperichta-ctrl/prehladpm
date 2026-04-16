@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_9.html -->
+<!-- saved from url=(0058)file:///C:/Users/JozefPerichta/Downloads/dashboard_10.html -->
 <html lang="sk"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2214,51 +2214,57 @@ function getProjektWeeks(cislo) {
 
 function renderPlan() {
   const today = new Date(); today.setHours(0,0,0,0);
-  const weeks = 8;
+  const weeks = 20;
 
-  // Build timeline per person
   const kapEl = document.getElementById('planKapacity');
   const frontaEl = document.getElementById('planFronta');
 
-  // Projekty s plánom
   const sPlany = projects.filter(p => plany[p.cislo] && plany[p.cislo].projektant && p.faza !== 'Ukončený');
-  // Projekty bez plánu (čakajú)
   const bezPlanu = projects.filter(p => (!plany[p.cislo] || !plany[p.cislo].projektant) && p.faza !== 'Ukončený' && p.faza !== 'Pozastavený');
 
-  // Per person timeline
+  // Váhy fáz pre výpočet kapacity
+  const VAHA = {full:100, coord:30, wait:0, inz:10, pause:0};
+
   kapEl.innerHTML = CLENOVIA.map(c => {
     const mojeProjekty = sPlany.filter(p => plany[p.cislo].projektant === c.id);
+
+    // Build week occupancy – pole percent záťaže
+    const occ = Array(weeks).fill(null).map(()=>[]);
+    mojeProjekty.forEach(proj => {
+      const pw = getProjektWeeks(proj.cislo);
+      pw.forEach(w => {
+        const wi = Math.round((w.weekStart-today)/(7*86400000));
+        if (wi >= 0 && wi < weeks) occ[wi].push(w);
+      });
+    });
+
+    // Percent záťaže per týždeň
+    const percenty = occ.map(ws => {
+      if (!ws.length) return 0;
+      return Math.min(100, ws.reduce((s,w) => s + (VAHA[w.typ]||0), 0));
+    });
+
+    // Pill – max záťaž v nasledujúcich 8 týždňoch
+    const maxPct = Math.max(...percenty.slice(0,8));
+    const pillTxt = maxPct + '%';
+    const pillCls = maxPct >= 80 ? 'cap-obsadeny' : maxPct >= 30 ? 'cap-ciastocne' : 'cap-volny';
+
     const weekLabels = Array.from({length:weeks},(_,i)=>{
       const d=new Date(today); d.setDate(d.getDate()+i*7);
       return `T${i+1}`;
     });
 
-    // Build week occupancy
-    const occ = Array(weeks).fill(null);
-    mojeProjekty.forEach(proj => {
-      const pw = getProjektWeeks(proj.cislo);
-      pw.forEach(w => {
-        const wi = Math.round((w.weekStart-today)/(7*86400000));
-        if (wi >= 0 && wi < weeks) {
-          if (!occ[wi]) occ[wi] = [];
-          occ[wi].push(w);
-        }
-      });
-    });
-
-    // Capacity pill
-    const hasFullWork = occ.some(w => w && w.some(x=>x.typ==='full'));
-    const hasFree = occ.some(w => !w || w.every(x=>x.typ==='inz'||x.typ==='wait'));
-    const pillCls = hasFullWork && !hasFree ? 'cap-obsadeny' : hasFullWork ? 'cap-ciastocne' : 'cap-volny';
-    const pillTxt = hasFullWork && !hasFree ? 'obsadený' : hasFullWork ? 'čiastočne voľný' : 'voľný';
-
     const barsHtml = occ.map((ws,i) => {
-      if (!ws || ws.length===0) return `<div class="plan-week"><div class="plan-week-bar pw-free"></div><div class="plan-week-lbl">${weekLabels[i]}</div></div>`;
+      if (!ws.length) return `<div class="plan-week"><div class="plan-week-bar pw-free"></div><div class="plan-week-lbl">${weekLabels[i]}</div></div>`;
       const main = ws.find(x=>x.typ==='full')||ws.find(x=>x.typ==='coord')||ws[0];
       const cls = {full:'pw-full',coord:'pw-coord',wait:'pw-wait',inz:'pw-inz',pause:'pw-pause'}[main.typ]||'pw-wait';
       const proj = projects.find(p=>p.cislo===main.cislo);
-      const lbl = proj ? proj.nazov.split(' ')[0].slice(0,8) : main.cislo;
-      return `<div class="plan-week"><div class="plan-week-bar ${cls}" title="${main.cislo}">${lbl}</div><div class="plan-week-lbl">${weekLabels[i]}</div></div>`;
+      const lbl = proj ? proj.nazov.split(/[\s\-–]/)[0].slice(0,7) : main.cislo;
+      const pct = percenty[i];
+      return `<div class="plan-week" onclick="openPlanModal('${main.cislo}')">
+        <div class="plan-week-bar ${cls}" title="${main.cislo} – ${pct}%">${lbl}</div>
+        <div class="plan-week-lbl">${weekLabels[i]}</div>
+      </div>`;
     }).join('');
 
     return `<div class="plan-person">
@@ -2268,13 +2274,12 @@ function renderPlan() {
           <div class="plan-name">${c.id}</div>
           <div class="plan-role">${c.typ==='APS'?'architekt + projektant':'projektant'}</div>
         </div>
-        <div class="plan-cap-pill ${pillCls}">${pillTxt}</div>
+        <div class="plan-cap-pill ${pillCls}">${pillTxt} max záťaž</div>
       </div>
       <div class="plan-timeline">${barsHtml}</div>
     </div>`;
   }).join('');
 
-  // Fronta
   if (!bezPlanu.length) {
     frontaEl.innerHTML = '<div class="empty" style="padding:16px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;margin:0 auto 6px;display:block;opacity:.3;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/></svg>Všetky projekty majú plán</div>';
   } else {
@@ -2288,12 +2293,6 @@ function renderPlan() {
         <div style="font-size:11px;color:var(--blue);font-weight:500;">+ Naplánovať</div>
       </div>`).join('');
   }
-
-  // Kliknutie na projekt v kapacitnom prehľade
-  sPlany.forEach(p => {
-    const el = document.querySelector(`[title="${p.cislo}"]`);
-    if (el) el.onclick = () => openPlanModal(p.cislo);
-  });
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────

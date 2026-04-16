@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_5.html -->
+<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_6.html -->
 <html lang="sk"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -1231,11 +1231,40 @@ function prowHtml(p) {
   const ulHtml = ul.length ? ul.map(u => {
     const stavCls = u.stav==='hotove'?'stav-hotove':u.stav==='cakam'?'stav-cakam-u':'stav-v-rieseni';
     const stavTxt = u.stav==='hotove'?'✓ Hotové':u.stav==='cakam'?'Čakám':'V riešení';
-    return `<div class="uloha-row">
+    const posledna = u.historia && u.historia.length ? u.historia[0].text : '';
+    return `<div class="uloha-row" id="ur-${u.id}">
       <div class="uloha-profesia">${u.profesia}</div>
-      <div class="uloha-stav ${stavCls}">${stavTxt}</div>
+      <div class="uloha-stav ${stavCls}" onclick="cycleUlohaStav('${p.cislo}',${u.id})" style="cursor:pointer">${stavTxt}</div>
       ${u.lopta?`<div class="uloha-lopta">@ ${u.lopta}</div>`:''}
-      <div class="uloha-popis">${u.popis||''}</div>
+      <div class="uloha-popis">${posledna}</div>
+      <div style="display:flex;gap:4px;flex-shrink:0;margin-left:auto;">
+        <button onclick="togglePoznamkaInput(${u.id})"
+          style="background:none;border:1px solid var(--border);border-radius:5px;
+          width:24px;height:24px;cursor:pointer;font-size:14px;color:var(--text3);
+          display:flex;align-items:center;justify-content:center;">+</button>
+        <button onclick="toggleHistoria(${u.id})"
+          style="background:none;border:1px solid var(--border);border-radius:5px;
+          width:24px;height:24px;cursor:pointer;font-size:11px;color:var(--text3);
+          display:flex;align-items:center;justify-content:center;">▾</button>
+      </div>
+    </div>
+    <div id="pi-${u.id}" style="display:none;padding:6px 16px 6px 24px;background:var(--bg2);border-bottom:1px solid var(--border);">
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="pt-${u.id}" placeholder="Pridať poznámku…"
+          style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+          padding:7px 10px;font-size:12px;color:var(--text);font-family:var(--sans);outline:none;"
+          onkeydown="if(event.key==='Enter')pridajPoznamku('${p.cislo}',${u.id})">
+        <button onclick="pridajPoznamku('${p.cislo}',${u.id})"
+          style="background:var(--text);color:#fff;border:none;border-radius:6px;
+          padding:7px 12px;font-size:12px;cursor:pointer;">OK</button>
+      </div>
+    </div>
+    <div id="hi-${u.id}" style="display:none;background:var(--bg2);border-bottom:1px solid var(--border);">
+      ${(u.historia||[]).map(h=>`
+        <div style="display:flex;gap:8px;padding:5px 16px 5px 24px;border-bottom:1px solid var(--border);font-size:11px;">
+          <span style="color:var(--text3);flex-shrink:0;min-width:110px;">${h.datum}</span>
+          <span style="color:var(--text2);">${h.text}</span>
+        </div>`).join('') || '<div style="padding:8px 24px;font-size:11px;color:var(--text3)">Žiadna história</div>'}
     </div>`;
   }).join('') : '';
 
@@ -1259,8 +1288,52 @@ function prowHtml(p) {
   </div>`;
 }
 
+function togglePoznamkaInput(id) {
+  const el = document.getElementById('pi-' + id);
+  if (!el) return;
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  if (show) document.getElementById('pt-' + id)?.focus();
+}
+
+function toggleHistoria(id) {
+  const el = document.getElementById('hi-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function pridajPoznamku(cislo, id) {
+  const inp = document.getElementById('pt-' + id);
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  const ul = ulohy[cislo];
+  if (!ul) return;
+  const u = ul.find(x => x.id === id);
+  if (!u) return;
+  if (!u.historia) u.historia = [];
+  const now = new Date();
+  const datum = now.getDate() + '.' + (now.getMonth()+1) + '. ' +
+    String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  u.historia.unshift({ datum, text });
+  inp.value = '';
+  localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
+  document.getElementById('pi-' + id).style.display = 'none';
+  renderAll();
+}
+
+function cycleUlohaStav(cislo, id) {
+  const ul = ulohy[cislo];
+  if (!ul) return;
+  const u = ul.find(x => x.id === id);
+  if (!u) return;
+  const stavy = ['v-rieseni', 'cakam', 'hotove'];
+  const idx = stavy.indexOf(u.stav);
+  u.stav = stavy[(idx + 1) % stavy.length];
+  localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
+  renderAll();
+}
+
 function toggleProjDetail(cislo, e) {
-  // Na mobile toggle, na desktope otvor edit
   if (window.innerWidth < 600) {
     const el = document.getElementById('ulohy-' + cislo);
     const row = e.currentTarget;

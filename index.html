@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_8.html -->
+<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_9.html -->
 <html lang="sk"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -454,6 +454,73 @@ header {
 .prio-medium { background: var(--ora-bg);  color: var(--orange); border: 1px solid var(--ora-bd); }
 .prio-low    { background: var(--bg3);     color: var(--text3);  border: 1px solid var(--border); }
 
+/* ── PLÁNOVANIE ── */
+.plan-person {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; margin-bottom: 8px; overflow: hidden;
+}
+.plan-person-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.plan-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--blu-bg); color: var(--blue);
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.plan-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+.plan-role { font-size: 11px; color: var(--text3); }
+.plan-cap-pill {
+  font-size: 10px; font-weight: 600; padding: 3px 9px;
+  border-radius: 20px; flex-shrink: 0;
+}
+.cap-obsadeny { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-bd); }
+.cap-ciastocne { background: var(--ora-bg); color: var(--orange); border: 1px solid var(--ora-bd); }
+.cap-volny { background: var(--grn-bg); color: var(--green); border: 1px solid var(--grn-bd); }
+.plan-timeline {
+  display: flex; gap: 3px; padding: 10px 14px; overflow-x: auto;
+}
+.plan-week {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0;
+}
+.plan-week-bar {
+  width: 54px; height: 34px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600; text-align: center;
+  padding: 2px; line-height: 1.2; cursor: default;
+}
+.pw-full  { background: #E24B4A22; color: #A32D2D; border: 1px solid #E24B4A44; }
+.pw-coord { background: var(--ora-bg); color: var(--orange); border: 1px solid var(--ora-bd); }
+.pw-wait  { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+.pw-inz   { background: var(--border); color: var(--text3); border: 1px solid var(--border2); }
+.pw-free  { background: var(--grn-bg); color: var(--green); border: 1px solid var(--grn-bd); }
+.pw-pause { background: var(--bg3); color: var(--text3); border: 1px dashed var(--border2); }
+.plan-week-lbl { font-size: 9px; color: var(--text3); }
+
+.plan-proj-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: background .12s;
+}
+.plan-proj-card:hover { background: var(--bg3); }
+
+/* ── PROJEKT STAVANIE ── */
+.proj-plan-modal { max-width: 540px; }
+.fazy-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.faza-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border-radius: 8px; padding: 8px 12px;
+}
+.faza-label { font-size: 12px; font-weight: 600; color: var(--text2); flex: 1; }
+.faza-input {
+  width: 52px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 8px; font-size: 12px;
+  color: var(--text); font-family: var(--sans); outline: none; text-align: center;
+}
+.faza-unit { font-size: 11px; color: var(--text3); }
+
 /* ── MODAL ── */
 .overlay {
   position: fixed; inset: 0; z-index: 200;
@@ -790,7 +857,131 @@ nav {
   </div>
 </div>
 
-<!-- MODAL -->
+<!-- ════════════════════════════════════════
+     SEKCIA 4 – PLÁNOVANIE
+════════════════════════════════════════ -->
+<div class="sec" id="secPlan">
+  <div class="sec-wrap">
+
+    <!-- Legenda -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+        <div style="width:12px;height:12px;border-radius:3px;background:#E24B4A33;border:1px solid #E24B4A66;"></div> Plná práca
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+        <div style="width:12px;height:12px;border-radius:3px;background:var(--ora-bg);border:1px solid var(--ora-bd);"></div> Koordinácia
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+        <div style="width:12px;height:12px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);"></div> Čakanie
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+        <div style="width:12px;height:12px;border-radius:3px;background:var(--grn-bg);border:1px solid var(--grn-bd);"></div> Voľný
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+        <div style="width:12px;height:12px;border-radius:3px;background:var(--border);"></div> Inžiniering (10%)
+      </div>
+    </div>
+
+    <!-- Kapacity -->
+    <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Kapacity</div>
+    <div id="planKapacity"></div>
+
+    <!-- Fronta -->
+    <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;">Čakajú na kapacitu</div>
+    <div id="planFronta"></div>
+
+  </div>
+</div>
+
+<!-- MODAL – PLÁN PROJEKTU -->
+<div class="overlay hidden" id="planModal">
+  <div class="modal proj-plan-modal">
+    <h3 id="planModalTitle">Nastavenie plánu</h3>
+    <div class="mfields">
+      <div class="mf full">
+        <label>Projektant / Architekt</label>
+        <select id="planProjektant">
+          <option value="">Vybrať…</option>
+          <option>Jozef</option><option>Mirka</option><option>Veronika</option>
+          <option>Erik</option><option>Lucia</option><option>Sona</option>
+        </select>
+      </div>
+      <div class="mf full">
+        <label>Typ</label>
+        <select id="planTyp" onchange="onPlanTypChange()">
+          <option value="PS">PS / SZ</option>
+          <option value="AS">AŠ</option>
+        </select>
+      </div>
+      <div class="mf full">
+        <label>Začiatok</label>
+        <input type="date" id="planStart">
+      </div>
+    </div>
+
+    <div id="planFazyPS" class="fazy-grid">
+      <div class="faza-row">
+        <div class="faza-label">Fáza 1 – Príprava ASR</div>
+        <input type="number" class="faza-input" id="pf1" min="1" max="3" value="2">
+        <div class="faza-unit">týž.</div>
+      </div>
+      <div class="faza-row" style="opacity:.6;">
+        <div class="faza-label">Fáza 2 – Čakanie (fixné)</div>
+        <div style="width:52px;text-align:center;font-size:12px;color:var(--text3);">1</div>
+        <div class="faza-unit">týž.</div>
+      </div>
+      <div class="faza-row">
+        <div class="faza-label">Fáza 3 – Koordinácia</div>
+        <input type="number" class="faza-input" id="pf3" min="1" max="3" value="2">
+        <div class="faza-unit">týž.</div>
+      </div>
+      <div class="faza-row">
+        <div class="faza-label">Fáza 4 – Dopracovanie</div>
+        <input type="number" class="faza-input" id="pf4" min="1" max="3" value="2">
+        <div class="faza-unit">týž.</div>
+      </div>
+      <div class="faza-row" style="opacity:.7;">
+        <div class="faza-label">Fáza 5 – Inžiniering (1d/2týž)</div>
+        <input type="checkbox" id="pf5" checked="" style="width:18px;height:18px;">
+      </div>
+    </div>
+
+    <div id="planFazyAS" class="fazy-grid" style="display:none;">
+      <div class="faza-row">
+        <div class="faza-label">Počet kôl (1–4)</div>
+        <input type="number" class="faza-input" id="asKola" min="1" max="4" value="2">
+        <div class="faza-unit">kôl</div>
+      </div>
+      <div class="faza-row">
+        <div class="faza-label">Trvanie návrhu / kolo</div>
+        <input type="number" class="faza-input" id="asNavrh" min="1" max="2" value="1">
+        <div class="faza-unit">týž.</div>
+      </div>
+      <div class="faza-row" style="opacity:.6;">
+        <div class="faza-label">Čakanie na klienta / kolo (fixné)</div>
+        <div style="width:52px;text-align:center;font-size:12px;color:var(--text3);">1</div>
+        <div class="faza-unit">týž.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;background:var(--bg3);border-radius:8px;padding:10px 12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <input type="checkbox" id="planPause" onchange="onPauseChange()" style="width:16px;height:16px;">
+        <label for="planPause" style="font-size:12px;font-weight:600;color:var(--text2);">Pozastaviť projekt</label>
+      </div>
+      <div id="planPauseDate" style="display:none;">
+        <label style="font-size:11px;color:var(--text3);">Pokračovanie od:</label>
+        <input type="date" id="planResumeDate" style="margin-top:4px;width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;">
+      </div>
+    </div>
+
+    <div class="mactions">
+      <button class="btn-ghost" onclick="closePlanModal()">Zrušiť</button>
+      <button class="btn-primary" onclick="savePlan()">Uložiť plán</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="modal">
   <div class="modal">
     <h3 id="modalTitle">Projekt</h3>
@@ -1005,6 +1196,15 @@ nav {
     </svg>
     Archív
   </div>
+  <div class="ntab" id="ntPlan" onclick="goTab(&#39;Plan&#39;)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+      <line x1="8" y1="14" x2="8" y2="14"></line><line x1="12" y1="14" x2="12" y2="14"></line>
+      <line x1="16" y1="14" x2="16" y2="14"></line>
+    </svg>
+    Plán
+  </div>
 </nav>
 
 <script>
@@ -1013,6 +1213,7 @@ let projects  = [];
 let ponuky    = JSON.parse(localStorage.getItem('pmPonuky3') || '[]');
 let budgets   = JSON.parse(localStorage.getItem('pmBudgets') || '{}');
 let ulohy     = JSON.parse(localStorage.getItem('pmUlohy') || '{}');
+let plany     = JSON.parse(localStorage.getItem('pmPlany') || '{}');
 let cfg       = JSON.parse(localStorage.getItem('pmCfg3')   || '{}');
 let maily     = [];
 let stavFilter = 'all';
@@ -1030,11 +1231,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── TABS ──────────────────────────────────────────────────────────────────
 function goTab(name) {
-  ['Prehled','Ponuky','Archiv'].forEach(n => {
+  ['Prehled','Ponuky','Archiv','Plan'].forEach(n => {
     document.getElementById('sec'+n).classList.toggle('active', n === name);
     document.getElementById('nt'+n).classList.toggle('active', n === name);
   });
   if (name === 'Archiv') renderArchiv();
+  if (name === 'Plan') renderPlan();
 }
 
 // ── CONFIG ─────────────────────────────────────────────────────────────────
@@ -1910,6 +2112,188 @@ async function vytvorUlohu() {
   renderAll();
   showToast('Úloha pridaná ✓','ok');
   // TODO: Caflou API vytvorenie úlohy
+}
+
+// ── PLÁNOVANIE ────────────────────────────────────────────────────────────
+const CLENOVIA = [
+  {id:'Jozef',   initials:'JO', typ:'APS'},
+  {id:'Mirka',   initials:'MI', typ:'APS'},
+  {id:'Veronika',initials:'VE', typ:'APS'},
+  {id:'Erik',    initials:'ER', typ:'PS'},
+  {id:'Lucia',   initials:'LU', typ:'PS'},
+  {id:'Sona',    initials:'SO', typ:'PS'},
+];
+
+function openPlanModal(cislo) {
+  const proj = projects.find(p => p.cislo === cislo);
+  document.getElementById('planModalTitle').textContent = cislo + (proj?' – '+proj.nazov:'');
+  const plan = plany[cislo] || {};
+  document.getElementById('planProjektant').value = plan.projektant || '';
+  document.getElementById('planTyp').value        = plan.typ || 'PS';
+  document.getElementById('planStart').value      = plan.start || new Date().toISOString().split('T')[0];
+  document.getElementById('pf1').value  = plan.f1 || 2;
+  document.getElementById('pf3').value  = plan.f3 || 2;
+  document.getElementById('pf4').value  = plan.f4 || 2;
+  document.getElementById('pf5').checked = plan.f5 !== false;
+  document.getElementById('asKola').value  = plan.asKola || 2;
+  document.getElementById('asNavrh').value = plan.asNavrh || 1;
+  document.getElementById('planPause').checked = !!plan.pause;
+  document.getElementById('planResumeDate').value = plan.resumeDate || '';
+  document.getElementById('planPauseDate').style.display = plan.pause ? '' : 'none';
+  onPlanTypChange();
+  document.getElementById('planModal').classList.remove('hidden');
+  document.getElementById('planModal')._cislo = cislo;
+}
+
+function closePlanModal() { document.getElementById('planModal').classList.add('hidden'); }
+
+function onPlanTypChange() {
+  const typ = document.getElementById('planTyp').value;
+  document.getElementById('planFazyPS').style.display = typ==='PS' ? '' : 'none';
+  document.getElementById('planFazyAS').style.display = typ==='AS' ? '' : 'none';
+}
+
+function onPauseChange() {
+  document.getElementById('planPauseDate').style.display =
+    document.getElementById('planPause').checked ? '' : 'none';
+}
+
+function savePlan() {
+  const cislo = document.getElementById('planModal')._cislo;
+  plany[cislo] = {
+    projektant: document.getElementById('planProjektant').value,
+    typ:        document.getElementById('planTyp').value,
+    start:      document.getElementById('planStart').value,
+    f1: parseInt(document.getElementById('pf1').value)||2,
+    f3: parseInt(document.getElementById('pf3').value)||2,
+    f4: parseInt(document.getElementById('pf4').value)||2,
+    f5: document.getElementById('pf5').checked,
+    asKola:  parseInt(document.getElementById('asKola').value)||2,
+    asNavrh: parseInt(document.getElementById('asNavrh').value)||1,
+    pause:   document.getElementById('planPause').checked,
+    resumeDate: document.getElementById('planResumeDate').value,
+  };
+  localStorage.setItem('pmPlany', JSON.stringify(plany));
+  closePlanModal();
+  renderPlan();
+  showToast('Plán uložený ✓','ok');
+}
+
+function getProjektWeeks(cislo) {
+  const plan = plany[cislo];
+  if (!plan || !plan.start) return [];
+  const weeks = [];
+  let d = new Date(plan.start);
+
+  if (plan.pause && plan.resumeDate) {
+    const pauseEnd = new Date(plan.resumeDate);
+    if (pauseEnd > d) {
+      const pauseWeeks = Math.ceil((pauseEnd - d) / (7*86400000));
+      for (let i = 0; i < pauseWeeks; i++) weeks.push({typ:'pause', label:'⏸', cislo});
+      d = pauseEnd;
+    }
+  }
+
+  if (plan.typ === 'AS') {
+    const kola = plan.asKola || 2;
+    const navrhT = plan.asNavrh || 1;
+    for (let k = 0; k < kola; k++) {
+      for (let i = 0; i < navrhT; i++) weeks.push({typ:'full', label:cislo, cislo});
+      weeks.push({typ:'wait', label:'čaká', cislo});
+    }
+  } else {
+    const f1 = plan.f1||2, f3 = plan.f3||2, f4 = plan.f4||2;
+    for (let i=0;i<f1;i++) weeks.push({typ:'full', label:cislo, cislo});
+    weeks.push({typ:'wait', label:'čaká', cislo});
+    for (let i=0;i<f3;i++) weeks.push({typ:'coord', label:cislo, cislo});
+    for (let i=0;i<f4;i++) weeks.push({typ:'full', label:cislo, cislo});
+    if (plan.f5) weeks.push({typ:'inz', label:'Inž.', cislo, ongoing:true});
+  }
+  return weeks.map((w,i) => ({...w, weekStart: new Date(d.getTime() + i*7*86400000)}));
+}
+
+function renderPlan() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weeks = 8;
+
+  // Build timeline per person
+  const kapEl = document.getElementById('planKapacity');
+  const frontaEl = document.getElementById('planFronta');
+
+  // Projekty s plánom
+  const sPlany = projects.filter(p => plany[p.cislo] && plany[p.cislo].projektant && p.faza !== 'Ukončený');
+  // Projekty bez plánu (čakajú)
+  const bezPlanu = projects.filter(p => (!plany[p.cislo] || !plany[p.cislo].projektant) && p.faza !== 'Ukončený' && p.faza !== 'Pozastavený');
+
+  // Per person timeline
+  kapEl.innerHTML = CLENOVIA.map(c => {
+    const mojeProjekty = sPlany.filter(p => plany[p.cislo].projektant === c.id);
+    const weekLabels = Array.from({length:weeks},(_,i)=>{
+      const d=new Date(today); d.setDate(d.getDate()+i*7);
+      return `T${i+1}`;
+    });
+
+    // Build week occupancy
+    const occ = Array(weeks).fill(null);
+    mojeProjekty.forEach(proj => {
+      const pw = getProjektWeeks(proj.cislo);
+      pw.forEach(w => {
+        const wi = Math.round((w.weekStart-today)/(7*86400000));
+        if (wi >= 0 && wi < weeks) {
+          if (!occ[wi]) occ[wi] = [];
+          occ[wi].push(w);
+        }
+      });
+    });
+
+    // Capacity pill
+    const hasFullWork = occ.some(w => w && w.some(x=>x.typ==='full'));
+    const hasFree = occ.some(w => !w || w.every(x=>x.typ==='inz'||x.typ==='wait'));
+    const pillCls = hasFullWork && !hasFree ? 'cap-obsadeny' : hasFullWork ? 'cap-ciastocne' : 'cap-volny';
+    const pillTxt = hasFullWork && !hasFree ? 'obsadený' : hasFullWork ? 'čiastočne voľný' : 'voľný';
+
+    const barsHtml = occ.map((ws,i) => {
+      if (!ws || ws.length===0) return `<div class="plan-week"><div class="plan-week-bar pw-free"></div><div class="plan-week-lbl">${weekLabels[i]}</div></div>`;
+      const main = ws.find(x=>x.typ==='full')||ws.find(x=>x.typ==='coord')||ws[0];
+      const cls = {full:'pw-full',coord:'pw-coord',wait:'pw-wait',inz:'pw-inz',pause:'pw-pause'}[main.typ]||'pw-wait';
+      const proj = projects.find(p=>p.cislo===main.cislo);
+      const lbl = proj ? proj.nazov.split(' ')[0].slice(0,8) : main.cislo;
+      return `<div class="plan-week"><div class="plan-week-bar ${cls}" title="${main.cislo}">${lbl}</div><div class="plan-week-lbl">${weekLabels[i]}</div></div>`;
+    }).join('');
+
+    return `<div class="plan-person">
+      <div class="plan-person-head">
+        <div class="plan-avatar">${c.initials}</div>
+        <div>
+          <div class="plan-name">${c.id}</div>
+          <div class="plan-role">${c.typ==='APS'?'architekt + projektant':'projektant'}</div>
+        </div>
+        <div class="plan-cap-pill ${pillCls}">${pillTxt}</div>
+      </div>
+      <div class="plan-timeline">${barsHtml}</div>
+    </div>`;
+  }).join('');
+
+  // Fronta
+  if (!bezPlanu.length) {
+    frontaEl.innerHTML = '<div class="empty" style="padding:16px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;margin:0 auto 6px;display:block;opacity:.3;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/></svg>Všetky projekty majú plán</div>';
+  } else {
+    frontaEl.innerHTML = bezPlanu.map(p => `
+      <div class="plan-proj-card" onclick="openPlanModal('${p.cislo}')">
+        <div class="prow-num">${p.cislo}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nazov}</div>
+          <div style="font-size:11px;color:var(--text3);">${p.faza}</div>
+        </div>
+        <div style="font-size:11px;color:var(--blue);font-weight:500;">+ Naplánovať</div>
+      </div>`).join('');
+  }
+
+  // Kliknutie na projekt v kapacitnom prehľade
+  sPlany.forEach(p => {
+    const el = document.querySelector(`[title="${p.cislo}"]`);
+    if (el) el.onclick = () => openPlanModal(p.cislo);
+  });
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────

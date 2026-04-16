@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="sk">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_3.html -->
+<html lang="sk"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#f5f3ef">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Prehľad">
 <title>Prehľad</title>
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%232c2825'/%3E%3Ctext x='90' y='118' font-family='Georgia,serif' font-size='64' font-weight='700' fill='%23f5f3ef' text-anchor='middle'%3EPM%3C/text%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns=&#39;http://www.w3.org/2000/svg&#39; viewBox=&#39;0 0 180 180&#39;%3E%3Crect width=&#39;180&#39; height=&#39;180&#39; rx=&#39;40&#39; fill=&#39;%232c2825&#39;/%3E%3Ctext x=&#39;90&#39; y=&#39;118&#39; font-family=&#39;Georgia,serif&#39; font-size=&#39;64&#39; font-weight=&#39;700&#39; fill=&#39;%23f5f3ef&#39; text-anchor=&#39;middle&#39;%3EPM%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./index_files/css2" rel="stylesheet">
 <style>
 :root {
   --bg:       #f5f3ef;
@@ -384,6 +384,35 @@ header {
 }
 .archiv-card:hover { opacity: 1; background: var(--bg3); }
 
+/* ── MAIL AKCIE ── */
+.mail-akcie {
+  margin: 10px 16px 0;
+  background: var(--bg2); border: 1px solid var(--blu-bd);
+  border-radius: 12px; overflow: hidden;
+}
+.mail-akcie.hidden { display: none; }
+.mail-akcie-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--blue);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.mail-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.mail-row:last-child { border-bottom: none; }
+.mail-row:hover { background: var(--bg3); }
+.mail-cislo { font-size: 10px; font-weight: 600; color: var(--text3); min-width: 52px; padding-top: 2px; }
+.mail-body { flex: 1; min-width: 0; }
+.mail-tema { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail-meta { font-size: 11px; color: var(--text3); }
+.mail-prio { font-size: 10px; font-weight: 600; border-radius: 4px; padding: 2px 7px; flex-shrink: 0; }
+.prio-high   { background: var(--red-bg);  color: var(--red);    border: 1px solid var(--red-bd); }
+.prio-medium { background: var(--ora-bg);  color: var(--orange); border: 1px solid var(--ora-bd); }
+.prio-low    { background: var(--bg3);     color: var(--text3);  border: 1px solid var(--border); }
+
 /* ── MODAL ── */
 .overlay {
   position: fixed; inset: 0; z-index: 200;
@@ -453,21 +482,21 @@ nav {
   <div class="logo">Tornyos Architects</div>
   <button class="hbtn" onclick="syncData()">
     <svg id="syncIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M23 4v6h-6M1 20v-6h6"/>
-      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      <path d="M23 4v6h-6M1 20v-6h6"></path>
+      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
     </svg>
     <span class="hbtn-lbl">Sync</span>
   </button>
   <button class="hbtn" onclick="openAddModal()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
     </svg>
     <span class="hbtn-lbl">Projekt</span>
   </button>
   <button class="hbtn" onclick="toggleCfg()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"/>
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"></path>
     </svg>
   </button>
 </header>
@@ -496,16 +525,16 @@ nav {
     <div style="margin-bottom: 8px;">
       <div style="font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; padding-left: 2px;">Urgentnosť</div>
       <div style="display: grid; grid-template-columns: repeat(3,1fr); gap: 7px;">
-        <div class="stat s-red" id="stHori" onclick="toggleStat('hori')">
-          <div class="stat-val" id="vHori">0</div>
+        <div class="stat s-red" id="stHori" onclick="toggleStat(&#39;hori&#39;)">
+          <div class="stat-val" id="vHori">3</div>
           <div class="stat-lbl">Horí dnes</div>
         </div>
-        <div class="stat s-orange" id="stCakam" onclick="toggleStat('cakam')">
-          <div class="stat-val" id="vCakam">0</div>
+        <div class="stat s-orange" id="stCakam" onclick="toggleStat(&#39;cakam&#39;)">
+          <div class="stat-val" id="vCakam">3</div>
           <div class="stat-lbl">Čakám na odpoveď</div>
         </div>
-        <div class="stat s-blue" id="stDeadline" onclick="toggleStat('deadline')">
-          <div class="stat-val" id="vDeadline">0</div>
+        <div class="stat s-blue" id="stDeadline" onclick="toggleStat(&#39;deadline&#39;)">
+          <div class="stat-val" id="vDeadline">3</div>
           <div class="stat-lbl">Deadline tento týždeň</div>
         </div>
       </div>
@@ -515,11 +544,11 @@ nav {
     <div>
       <div style="font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; padding-left: 2px;">Aktivita</div>
       <div style="display: grid; grid-template-columns: repeat(2,1fr); gap: 7px;">
-        <div class="stat" id="stAktivne" onclick="toggleStat('aktivne')">
-          <div class="stat-val" id="vAktivne">0</div>
+        <div class="stat" id="stAktivne" onclick="toggleStat(&#39;aktivne&#39;)">
+          <div class="stat-val" id="vAktivne">4</div>
           <div class="stat-lbl">Aktívne projekty</div>
         </div>
-        <div class="stat" id="stPozastavene" onclick="toggleStat('pozastavene')">
+        <div class="stat" id="stPozastavene" onclick="toggleStat(&#39;pozastavene&#39;)">
           <div class="stat-val" id="vPozastavene">0</div>
           <div class="stat-lbl">Pozastavené</div>
         </div>
@@ -533,7 +562,7 @@ nav {
     <div class="search-row-inputs">
       <div class="search-input-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <input id="searchQ" type="text" placeholder="Hľadať projekt…" oninput="doSearch()">
       </div>
@@ -575,6 +604,15 @@ nav {
     <div id="sdList"></div>
   </div>
 
+  <!-- Akcie z mailov -->
+  <div class="mail-akcie hidden" id="mailAkcie">
+    <div class="mail-akcie-head">
+      <span>📬 Akcie z mailov</span>
+      <span class="badge" id="mailAkcieCount">0</span>
+    </div>
+    <div id="mailAkcieList"></div>
+  </div>
+
 </div>
 
 <!-- ════════════════════════════════════════
@@ -587,7 +625,7 @@ nav {
     <div class="pform">
       <div class="pform-head">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+          <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>
         </svg>
         Zadať cenovú ponuku
       </div>
@@ -642,16 +680,16 @@ nav {
     <div class="ponuky-filter-bar">
       <div class="ponuky-search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <input type="text" id="fPonukyQ" placeholder="Filtrovať projekt…" oninput="onFPonukyQ()" autocomplete="off">
         <div class="ponuky-dropdown" id="fPonukyDrop"></div>
         <input type="hidden" id="fPonukyVal">
       </div>
       <div class="stav-btns">
-        <div class="sbtn active" onclick="setStav('all',this)">Všetky</div>
-        <div class="sbtn" onclick="setStav('cakam',this)">Čakám</div>
-        <div class="sbtn" onclick="setStav('prijata',this)">Prijaté</div>
+        <div class="sbtn active" onclick="setStav(&#39;all&#39;,this)">Všetky</div>
+        <div class="sbtn" onclick="setStav(&#39;cakam&#39;,this)">Čakám</div>
+        <div class="sbtn" onclick="setStav(&#39;prijata&#39;,this)">Prijaté</div>
       </div>
     </div>
 
@@ -683,7 +721,7 @@ nav {
     <!-- Zoznam ponúk -->
     <div id="listPonuky">
       <div class="empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path></svg>
         Zatiaľ žiadne ponuky
       </div>
     </div>
@@ -698,13 +736,13 @@ nav {
   <div class="sec-wrap">
     <div class="archiv-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
       <input type="text" id="archivQ" placeholder="Hľadať ukončený projekt…" oninput="renderArchiv()">
     </div>
     <div id="listArchiv">
       <div class="empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect></svg>
         Žiadne ukončené projekty
       </div>
     </div>
@@ -765,27 +803,95 @@ nav {
   </div>
 </div>
 
+<!-- MODAL – NOVÁ ÚLOHA V CAFLOU -->
+<div class="overlay hidden" id="ulohaModal">
+  <div class="modal">
+    <h3>Nová úloha v Caflou</h3>
+    <div class="mfields">
+      <div class="mf full">
+        <label>Projekt</label>
+        <input id="uProjekt" type="text" readonly="" style="background:var(--bg3);color:var(--text2);">
+      </div>
+      <div class="mf full">
+        <label>Názov úlohy</label>
+        <input id="uNazov" type="text" placeholder="Čo treba urobiť…">
+      </div>
+      <div class="mf">
+        <label>Profesia</label>
+        <select id="uProfesia">
+          <option value="">Vybrať…</option>
+          <option>Statika</option>
+          <option>PBS</option>
+          <option>ELI</option>
+          <option>ZTI</option>
+          <option>ÚK</option>
+          <option>VZT</option>
+          <option>Plyn</option>
+          <option>Doprava</option>
+          <option>Slaboprúd</option>
+          <option>VN</option>
+          <option>ASR</option>
+          <option>Iné</option>
+        </select>
+      </div>
+      <div class="mf">
+        <label>Prideliť komu</label>
+        <select id="uPrideleny">
+          <option value="">Vybrať…</option>
+          <option>Jozef</option>
+          <option>Tomas</option>
+          <option>Mirka</option>
+          <option>Veronika</option>
+          <option>Erik</option>
+          <option>Lucia</option>
+          <option>Sona</option>
+        </select>
+      </div>
+      <div class="mf">
+        <label>Termín</label>
+        <input id="uTermin" type="date">
+      </div>
+      <div class="mf">
+        <label>Priorita</label>
+        <select id="uPriorita">
+          <option value="2">Stredná</option>
+          <option value="3">Vysoká</option>
+          <option value="1">Nízka</option>
+        </select>
+      </div>
+      <div class="mf full">
+        <label>Popis / Poznámka</label>
+        <textarea id="uPopis" placeholder="Kontext z mailu…"></textarea>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btn-ghost" onclick="closeUlohaModal()">Zrušiť</button>
+      <button class="btn-primary" onclick="vytvorUlohu()">Vytvoriť v Caflou</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- NAV -->
 <nav>
-  <div class="ntab active" id="ntPrehled" onclick="goTab('Prehled')">
+  <div class="ntab active" id="ntPrehled" onclick="goTab(&#39;Prehled&#39;)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+      <rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect>
     </svg>
     Prehľad
   </div>
-  <div class="ntab" id="ntPonuky" onclick="goTab('Ponuky')">
+  <div class="ntab" id="ntPonuky" onclick="goTab(&#39;Ponuky&#39;)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+      <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>
     </svg>
     Ponuky
   </div>
-  <div class="ntab" id="ntArchiv" onclick="goTab('Archiv')">
+  <div class="ntab" id="ntArchiv" onclick="goTab(&#39;Archiv&#39;)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
-      <line x1="10" y1="12" x2="14" y2="12"/>
+      <polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect>
+      <line x1="10" y1="12" x2="14" y2="12"></line>
     </svg>
     Archív
   </div>
@@ -797,6 +903,7 @@ let projects  = [];
 let ponuky    = JSON.parse(localStorage.getItem('pmPonuky3') || '[]');
 let budgets   = JSON.parse(localStorage.getItem('pmBudgets') || '{}');
 let cfg       = JSON.parse(localStorage.getItem('pmCfg3')   || '{}');
+let maily     = [];
 let stavFilter = 'all';
 let activeStat = null;
 
@@ -847,13 +954,73 @@ async function syncData() {
     const d2 = await r2.json();
     if (!d2.error) ponuky = parsePonukyRows(d2.values || []);
 
+    // Load maily
+    const r3 = await fetch(cfg.url + '?sheet=Maily%20%E2%80%93%20preh%C4%BEad&t=' + Date.now());
+    const d3 = await r3.json();
+    if (!d3.error) maily = parseMailyRows(d3.values || []);
+
     renderAll();
     renderPonuky();
+    renderMaily();
     showToast(projects.length + ' projektov', 'ok');
   } catch(e) {
     showToast('Chyba: ' + e.message, 'err');
     if (!projects.length) loadDemo();
   } finally { ico.classList.remove('spin'); }
+}
+
+function parseMailyRows(rows) {
+  if (rows.length < 2) return [];
+  const t = new Date(); t.setHours(0,0,0,0);
+  const limit = new Date(t); limit.setDate(limit.getDate() - 7);
+  return rows.slice(1).filter(r => r[0]).map(r => ({
+    datum:      String(r[0]||''),
+    cislo:      String(r[1]||''),
+    nazov:      String(r[2]||''),
+    odKoho:     String(r[3]||''),
+    rola:       String(r[4]||''),
+    tema:       String(r[5]||''),
+    dohodnute:  String(r[6]||''),
+    akcia:      String(r[7]||'NIE'),
+    akciaPopis: String(r[8]||''),
+    termin:     String(r[9]||''),
+    priorita:   String(r[10]||'low'),
+  })).filter(m => {
+    const d = new Date(m.datum);
+    return !isNaN(d) && d >= limit;
+  });
+}
+
+function renderMaily() {
+  const akcie = maily.filter(m => m.akcia === 'ÁNO');
+  const el    = document.getElementById('mailAkcie');
+  const list  = document.getElementById('mailAkcieList');
+  const count = document.getElementById('mailAkcieCount');
+
+  if (!akcie.length) { el.classList.add('hidden'); return; }
+
+  count.textContent = akcie.length;
+  el.classList.remove('hidden');
+
+  list.innerHTML = akcie.map(m => {
+    const prioCls = m.priorita === 'high' ? 'prio-high' : m.priorita === 'medium' ? 'prio-medium' : 'prio-low';
+    const prioTxt = m.priorita === 'high' ? 'Vysoká' : m.priorita === 'medium' ? 'Stredná' : 'Nízka';
+    return `<div class="mail-row">
+      <div class="mail-cislo">${m.cislo || '—'}</div>
+      <div class="mail-body">
+        <div class="mail-tema">${m.akciaPopis || m.tema}</div>
+        <div class="mail-meta">${m.odKoho}${m.termin ? ' · ' + m.termin : ''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+        <div class="mail-prio ${prioCls}">${prioTxt}</div>
+        <button onclick="openUlohaModal(${JSON.stringify(m).replace(/"/g,'&quot;')})"
+          style="background:var(--text);color:#fff;border:none;border-radius:6px;
+          padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">
+          + Caflou
+        </button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function parsePonukyRows(rows) {
@@ -1370,6 +1537,41 @@ async function updatePonukaInSheets(p) {
   } catch(e) {}
 }
 
+// ── ÚLOHA MODAL ───────────────────────────────────────────────────────────
+function openUlohaModal(m) {
+  const proj = projects.find(p => p.cislo === m.cislo);
+  document.getElementById('uProjekt').value = m.cislo ? m.cislo + ' – ' + (proj?.nazov || '') : '';
+  document.getElementById('uNazov').value   = m.akciaPopis || m.tema || '';
+  document.getElementById('uPopis').value   = 'Mail od: ' + m.odKoho + '\nTéma: ' + m.tema;
+  document.getElementById('uTermin').value  = m.termin || '';
+  document.getElementById('uPriorita').value = m.priorita === 'high' ? '3' : m.priorita === 'low' ? '1' : '2';
+  document.getElementById('uProfesia').value = '';
+  document.getElementById('uPrideleny').value = '';
+  document.getElementById('ulohaModal').classList.remove('hidden');
+  document.getElementById('ulohaModal')._mail = m;
+}
+
+function closeUlohaModal() {
+  document.getElementById('ulohaModal').classList.add('hidden');
+}
+
+async function vytvorUlohu() {
+  const nazov     = document.getElementById('uNazov').value.trim();
+  const prideleny = document.getElementById('uPrideleny').value;
+  const termin    = document.getElementById('uTermin').value;
+  const priorita  = document.getElementById('uPriorita').value;
+  const popis     = document.getElementById('uPopis').value;
+
+  if (!nazov)     { showToast('Zadaj názov úlohy','err'); return; }
+  if (!prideleny) { showToast('Vyber komu prideliť','err'); return; }
+
+  // TODO: po napojení Caflou API nahradiť skutočným volaním
+  showToast('Caflou API ešte nie je prepojené','err');
+  // Keď bude Caflou:
+  // await fetch(cfg.url, {method:'POST', body: JSON.stringify({action:'caflou_uloha', nazov, prideleny, termin, priorita, popis})});
+  closeUlohaModal();
+}
+
 // ── TOAST ─────────────────────────────────────────────────────────────────
 function showToast(msg,type='') {
   const t=document.getElementById('toast');
@@ -1378,5 +1580,6 @@ function showToast(msg,type='') {
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 </script>
-</body>
-</html>
+
+
+</body></html>

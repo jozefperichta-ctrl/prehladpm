@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_7.html -->
+<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_8.html -->
 <html lang="sk"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -409,12 +409,15 @@ header {
 .uloha-lopta { font-size: 11px; color: var(--text3); flex-shrink: 0; }
 .uloha-popis { flex: 1; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .uloha-add-btn {
-  display: flex; align-items: center; gap: 5px;
-  padding: 6px 16px 6px 24px;
-  font-size: 11px; color: var(--blue); cursor: pointer;
-  border-top: 1px dashed var(--border);
+  position: absolute; bottom: 0; left: 0;
+  width: 22px; height: 22px;
+  background: var(--blue); color: #fff;
+  border-radius: 0 6px 0 0;
+  font-size: 16px; font-weight: 300; line-height: 22px; text-align: center;
+  cursor: pointer; user-select: none;
+  transition: opacity .15s;
 }
-.uloha-add-btn:hover { background: var(--bg2); }
+.uloha-add-btn:hover { opacity: .8; }
 
 /* Na desktope vždy viditeľné, na mobile skryté */
 @media(max-width:600px) {
@@ -1330,7 +1333,8 @@ function prowHtml(p) {
     </div>`;
   }).join('') : '';
 
-  return `<div class="prow" onclick="toggleProjDetail('${p.cislo}',event)">
+  return `<div style="position:relative;">
+  <div class="prow" onclick="toggleProjDetail('${p.cislo}',event)">
     <div class="prow-num">${p.cislo}</div>
     <div class="prow-body">
       <div class="prow-name">${p.nazov}</div>
@@ -1344,9 +1348,8 @@ function prowHtml(p) {
   </div>
   <div class="proj-ulohy" id="ulohy-${p.cislo}">
     ${ulHtml}
-    <div class="uloha-add-btn" onclick="openUlohaForm('${p.cislo}')">
-      + Pridať úlohu
-    </div>
+    <div class="uloha-add-btn" onclick="openUlohaForm('${p.cislo}')">+</div>
+  </div>
   </div>`;
 }
 

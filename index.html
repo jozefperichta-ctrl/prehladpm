@@ -2565,7 +2565,7 @@ function renderFronty() {
     el2.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0;">Všetky projekty sú zaradené.</div>';
   } else {
     el2.innerHTML = bezProjektanta.map(p => `
-      <div class="plan-proj-card">
+      <div class="plan-proj-card" data-cislo="${p.cislo}">
         <div class="prow-num">${p.cislo}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nazov}</div>
@@ -2583,152 +2583,157 @@ function renderFronty() {
   }
 }
 
-// Modal pre pridanie do fronty
+// Modal pre pridanie do fronty – namiesto prompt
 function openFrontaModal(cislo, typ) {
   const proj = projects.find(p => p.cislo===cislo);
-  const nazov = proj ? proj.nazov : cislo;
-  const typLabels = {as:'Architektonická štúdia (AŠ)', sz:'Stavebný zámer (SZ)', ps:'Projekt stavby (PS)'};
+  const typLabels = {as:'AŠ', sz:'SZ', ps:'PS'};
   const osoby = typ==='as'
     ? CLENOVIA.filter(c => c.typ==='APS')
     : CLENOVIA;
 
-  // Jednoduché potvrdenie – vyber projektanta
-  const osoba = prompt(`Pridať ${cislo} – ${nazov}\n${typLabels[typ]}\n\nVyber projektanta:\n${osoby.map((c,i)=>`${i+1}. ${c.id}`).join('\n')}\n\nZadaj číslo:`);
-  if (!osoba) return;
-  const idx = parseInt(osoba)-1;
-  if (idx>=0 && idx<osoby.length) {
-    pridajDoFronty(osoby[idx].id, cislo, typ);
-    showToast(`${cislo} pridaný do fronty – ${osoby[idx].id}`,'ok');
-  }
+  // Vytvor inline dropdown priamo v karte
+  const elId = `fm-${cislo}-${typ}`;
+  const existing = document.getElementById(elId);
+  if (existing) { existing.remove(); return; }
+
+  const kontainer = document.querySelector(`[data-cislo="${cislo}"]`);
+  if (!kontainer) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.id = elId;
+  dropdown.style.cssText = 'margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;';
+  dropdown.innerHTML = `<span style="font-size:11px;color:var(--text2);line-height:28px;">${typLabels[typ]} →</span>` +
+    osoby.map(c => `
+      <button onclick="pridajDoFrontyA('${c.id}','${cislo}','${typ}')"
+        style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+        padding:4px 10px;font-size:11px;cursor:pointer;color:var(--text2);">${c.id}</button>
+    `).join('') +
+    `<button onclick="document.getElementById('${elId}').remove()"
+      style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;">×</button>`;
+
+  kontainer.appendChild(dropdown);
+}
+
+function pridajDoFrontyA(osoba, cislo, typ) {
+  pridajDoFronty(osoba, cislo, typ);
+  const elId = `fm-${cislo}-${typ}`;
+  document.getElementById(elId)?.remove();
+  showToast(`${cislo} → ${osoba}`,'ok');
 }
 
 // ── SIMULÁCIA ─────────────────────────────────────────────────────────────
 function autoPlanovanie() {
   const today = new Date(); today.setHours(0,0,0,0);
+  const monday = new Date(today);
+  monday.setDate(monday.getDate() - (monday.getDay()||7) + 1);
   const MAX_WEEKS = 52;
-  const VAHA = {full:100, coord:30, wait:0, inz:10};
+  const VAHA = {full:100, coord:30, wait:0, inz:10, pause:0};
 
   CLENOVIA.forEach(c => {
     const fronta = (fronty[c.id] || []).slice();
     if (!fronta.length) return;
 
-    // Zostav časovú os záťaže z existujúcich plánov (bez fronty)
+    // Zostav záťaž z existujúcich plánov (len tie čo NIE sú vo fronte)
     const zataz = Array(MAX_WEEKS).fill(0);
-
-    // Pridaj záťaž z existujúcich naplánovaných projektov
-    const monday = new Date(today);
-    monday.setDate(monday.getDate() - (monday.getDay()||7) + 1);
-
     Object.keys(plany).forEach(cislo => {
+      if (fronta.find(f => f.cislo===cislo)) return;
       const pw = getProjektWeeksForOsoba(cislo, c.id);
       pw.forEach(w => {
         const wi = Math.round((w.weekStart - monday) / (7*86400000));
-        if (wi >= 0 && wi < MAX_WEEKS) zataz[wi] += (VAHA[w.typ]||0);
+        if (wi >= 0 && wi < MAX_WEEKS) zataz[wi] = Math.min(200, zataz[wi] + (VAHA[w.typ]||0));
       });
     });
 
-    // Pre každý projekt vo fronte simuluj
     fronta.forEach(item => {
-      // Zostav fázy projektu
-      const fazy = buildFazy(item.cislo, item.typ, c.id);
+      const fazy = buildFazy(item.cislo, item.typ);
       if (!fazy.length) return;
 
-      // Simuluj týždeň po týždni
-      const schedule = simulujFazy(fazy, zataz, MAX_WEEKS);
+      let startWeek = 0;
+      while (startWeek < MAX_WEEKS && zataz[startWeek] >= 100) startWeek++;
 
-      // Ulož výsledok do plány
+      const weekMap = simulujFazyV2(fazy, zataz, startWeek, MAX_WEEKS);
+      if (!weekMap.length) return;
+
+      const startDate = new Date(monday.getTime() + weekMap[0].week*7*86400000);
       if (!plany[item.cislo]) plany[item.cislo] = {};
-      const startWeek = schedule[0]?.week || 0;
-      const startDate = new Date(monday.getTime() + startWeek*7*86400000);
+      const existingPlan = plany[item.cislo]?.[item.typ] || {};
 
       if (item.typ === 'as') {
         plany[item.cislo].as = {
           architekt: c.id,
           start: startDate.toISOString().split('T')[0],
-          kola: fazy.find(f=>f.typ==='kola')?.kola || 2,
-          navrh: fazy.find(f=>f.typ==='kola')?.navrh || 1,
+          kola: existingPlan.kola || 2,
+          navrh: existingPlan.navrh || 1,
         };
       } else {
-        const s = item.typ;
-        plany[item.cislo][s] = {
+        plany[item.cislo][item.typ] = {
           projektant: c.id,
           start: startDate.toISOString().split('T')[0],
-          f1: fazy.find(f=>f.faza===1)?.tydne || 2,
-          f3: fazy.find(f=>f.faza===3)?.tydne || 2,
-          f4: fazy.find(f=>f.faza===4)?.tydne || 2,
-          f5: true,
+          f1: existingPlan.f1 || 2,
+          f3: existingPlan.f3 || 2,
+          f4: existingPlan.f4 || 2,
+          f5: existingPlan.f5 !== false,
         };
       }
 
-      // Aktualizuj záťaž
-      schedule.forEach(s => {
-        if (s.week >= 0 && s.week < MAX_WEEKS) zataz[s.week] += (VAHA[s.typ]||0);
+      weekMap.forEach(w => {
+        if (w.week >= 0 && w.week < MAX_WEEKS)
+          zataz[w.week] = Math.min(200, zataz[w.week] + (VAHA[w.typ]||0));
       });
     });
   });
 
   localStorage.setItem('pmPlany', JSON.stringify(plany));
   renderPlan();
-  renderFronty();
   showToast('Plán aktualizovaný ✓','ok');
 }
 
-function buildFazy(cislo, typ, osoba) {
-  // Vráti zoznam fáz so záťažou a trvaním
+function buildFazy(cislo, typ) {
   const plan = plany[cislo];
   const fazy = [];
   if (typ === 'as') {
     const kola = plan?.as?.kola || 2;
     const navrh = plan?.as?.navrh || 1;
-    fazy.push({typ:'full', tydneWork: navrh*kola, tydne:navrh*kola, kola, navrh});
-    // čakanie je nulová záťaž – automaticky
+    for (let k=0; k<kola; k++) {
+      fazy.push({typ:'full', workUnits: navrh*100});
+      fazy.push({typ:'wait', fixedWeeks: 1});
+    }
   } else {
     const s = plan?.[typ];
-    const f1 = s?.f1 || 2, f3 = s?.f3 || 2, f4 = s?.f4 || 2;
-    fazy.push({faza:1, typ:'full',  tydneWork:f1, tydne:f1});
-    fazy.push({faza:2, typ:'wait',  tydneWork:0,  tydne:1}); // fixné čakanie
-    fazy.push({faza:3, typ:'coord', tydneWork:f3, tydne:f3});
-    fazy.push({faza:4, typ:'full',  tydneWork:f4, tydne:f4});
-    if (s?.f5 !== false) fazy.push({faza:5, typ:'inz', tydneWork:0, tydne:1, ongoing:true});
+    const f1=s?.f1||2, f3=s?.f3||2, f4=s?.f4||2;
+    fazy.push({typ:'full',  workUnits: f1*100});
+    fazy.push({typ:'wait',  fixedWeeks: 1});
+    fazy.push({typ:'coord', workUnits: f3*100});
+    fazy.push({typ:'full',  workUnits: f4*100});
+    if (s?.f5 !== false) fazy.push({typ:'inz', fixedWeeks: 1});
   }
   return fazy;
 }
 
-function simulujFazy(fazy, zataz, maxWeeks) {
-  const schedule = [];
-  let week = 0;
-
-  // Nájdi prvý týždeň kde je voľná kapacita
-  while (week < maxWeeks && zataz[week] >= 100) week++;
+function simulujFazyV2(fazy, zataz, startWeek, maxWeeks) {
+  const result = [];
+  let week = startWeek;
 
   fazy.forEach(faza => {
-    if (faza.typ === 'wait') {
-      // Fixné čakanie – 1 týždeň bez záťaže
-      schedule.push({week, typ:'wait'});
-      week++;
+    if (faza.fixedWeeks) {
+      for (let i=0; i<faza.fixedWeeks && week<maxWeeks; i++) {
+        result.push({week, typ: faza.typ});
+        week++;
+      }
       return;
     }
-    if (faza.ongoing) {
-      schedule.push({week, typ:'inz'});
-      return;
-    }
-
-    // Simuluj po týždňoch – napreduj podľa voľnej kapacity
-    let zostatok = faza.tydneWork * 100; // v % jednotkách
+    let zostatok = faza.workUnits;
     while (zostatok > 0 && week < maxWeeks) {
       const volna = Math.max(0, 100 - (zataz[week]||0));
       if (volna > 0) {
-        schedule.push({week, typ: faza.typ});
+        result.push({week, typ: faza.typ});
         zostatok -= volna;
-      } else {
-        // Týždeň preskočíme (nemáme kapacitu) – ale zaznačíme ho
-        schedule.push({week, typ:'wait'});
       }
       week++;
     }
   });
 
-  return schedule;
+  return result;
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_3.html -->
+<!-- saved from url=(0057)file:///C:/Users/JozefPerichta/Downloads/dashboard_5.html -->
 <html lang="sk"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -383,6 +383,44 @@ header {
   gap: 10px; cursor: pointer; opacity: .75; transition: opacity .15s, background .12s;
 }
 .archiv-card:hover { opacity: 1; background: var(--bg3); }
+
+/* ── PROJEKT ÚLOHY ── */
+.proj-ulohy {
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+}
+.uloha-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px 7px 24px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.uloha-row:last-child { border-bottom: none; }
+.uloha-profesia {
+  font-weight: 600; color: var(--text2); min-width: 72px; font-size: 11px;
+}
+.uloha-stav {
+  font-size: 10px; font-weight: 600; border-radius: 4px;
+  padding: 2px 7px; flex-shrink: 0;
+}
+.stav-v-rieseni { background: var(--blu-bg); color: var(--blue); border: 1px solid var(--blu-bd); }
+.stav-cakam-u   { background: var(--ora-bg); color: var(--orange); border: 1px solid var(--ora-bd); }
+.stav-hotove    { background: var(--grn-bg); color: var(--green); border: 1px solid var(--grn-bd); }
+.uloha-lopta { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+.uloha-popis { flex: 1; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uloha-add-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 16px 6px 24px;
+  font-size: 11px; color: var(--blue); cursor: pointer;
+  border-top: 1px dashed var(--border);
+}
+.uloha-add-btn:hover { background: var(--bg2); }
+
+/* Na desktope vždy viditeľné, na mobile skryté */
+@media(max-width:600px) {
+  .proj-ulohy { display: none; }
+  .prow.expanded + .proj-ulohy { display: block; }
+}
 
 /* ── MAIL AKCIE ── */
 .mail-akcie {
@@ -806,17 +844,22 @@ nav {
 <!-- MODAL – NOVÁ ÚLOHA V CAFLOU -->
 <div class="overlay hidden" id="ulohaModal">
   <div class="modal">
-    <h3>Nová úloha v Caflou</h3>
+    <h3>Nová úloha</h3>
+
+    <!-- Prepínač typu -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <div id="typProfesia" class="sbtn active" onclick="switchUlohaTyp(&#39;profesia&#39;)" style="flex:1;text-align:center;border-radius:8px;padding:8px;">Profesia</div>
+      <div id="typInterna" class="sbtn" onclick="switchUlohaTyp(&#39;interna&#39;)" style="flex:1;text-align:center;border-radius:8px;padding:8px;">Interná úloha</div>
+    </div>
+
     <div class="mfields">
       <div class="mf full">
         <label>Projekt</label>
         <input id="uProjekt" type="text" readonly="" style="background:var(--bg3);color:var(--text2);">
       </div>
-      <div class="mf full">
-        <label>Názov úlohy</label>
-        <input id="uNazov" type="text" placeholder="Čo treba urobiť…">
-      </div>
-      <div class="mf">
+
+      <!-- Profesia polia -->
+      <div class="mf full" id="uFieldProfesia">
         <label>Profesia</label>
         <select id="uProfesia">
           <option value="">Vybrať…</option>
@@ -834,7 +877,17 @@ nav {
           <option>Iné</option>
         </select>
       </div>
-      <div class="mf">
+      <div class="mf full" id="uFieldDodavatel">
+        <label>Dodávateľ</label>
+        <input id="uDodavatel" type="text" placeholder="Hľadať dodávateľa… (po Caflou prepojení)">
+      </div>
+
+      <!-- Interná úloha polia -->
+      <div class="mf full" id="uFieldNazov" style="display:none;">
+        <label>Názov úlohy</label>
+        <input id="uNazov" type="text" placeholder="Čo treba urobiť…">
+      </div>
+      <div class="mf full" id="uFieldPrideleny" style="display:none;">
         <label>Prideliť komu</label>
         <select id="uPrideleny">
           <option value="">Vybrať…</option>
@@ -847,6 +900,8 @@ nav {
           <option>Sona</option>
         </select>
       </div>
+
+      <!-- Spoločné polia -->
       <div class="mf">
         <label>Termín</label>
         <input id="uTermin" type="date">
@@ -860,13 +915,13 @@ nav {
         </select>
       </div>
       <div class="mf full">
-        <label>Popis / Poznámka</label>
-        <textarea id="uPopis" placeholder="Kontext z mailu…"></textarea>
+        <label>Poznámka</label>
+        <textarea id="uPopis" placeholder="Poznámka k úlohe…"></textarea>
       </div>
     </div>
     <div class="mactions">
       <button class="btn-ghost" onclick="closeUlohaModal()">Zrušiť</button>
-      <button class="btn-primary" onclick="vytvorUlohu()">Vytvoriť v Caflou</button>
+      <button class="btn-primary" onclick="vytvorUlohu()">Vytvoriť</button>
     </div>
   </div>
 </div>
@@ -902,6 +957,7 @@ nav {
 let projects  = [];
 let ponuky    = JSON.parse(localStorage.getItem('pmPonuky3') || '[]');
 let budgets   = JSON.parse(localStorage.getItem('pmBudgets') || '{}');
+let ulohy     = JSON.parse(localStorage.getItem('pmUlohy') || '{}');
 let cfg       = JSON.parse(localStorage.getItem('pmCfg3')   || '{}');
 let maily     = [];
 let stavFilter = 'all';
@@ -1171,7 +1227,19 @@ function jeUMna(lopta) {
 function prowHtml(p) {
   const dc = p.dniDead!=null&&p.dniDead<=0?'red':p.dniDead!=null&&p.dniDead<=3?'orange':'muted';
   const ds = p.dniDead!=null?(p.dniDead<=0?'Dnes!':p.dniDead+'d'):(p.dniCaka!=null&&p.dniCaka>7?p.dniCaka+'d←':'');
-  return `<div class="prow" onclick="openEdit('${p.cislo}')">
+  const ul = (ulohy[p.cislo] || []);
+  const ulHtml = ul.length ? ul.map(u => {
+    const stavCls = u.stav==='hotove'?'stav-hotove':u.stav==='cakam'?'stav-cakam-u':'stav-v-rieseni';
+    const stavTxt = u.stav==='hotove'?'✓ Hotové':u.stav==='cakam'?'Čakám':'V riešení';
+    return `<div class="uloha-row">
+      <div class="uloha-profesia">${u.profesia}</div>
+      <div class="uloha-stav ${stavCls}">${stavTxt}</div>
+      ${u.lopta?`<div class="uloha-lopta">@ ${u.lopta}</div>`:''}
+      <div class="uloha-popis">${u.popis||''}</div>
+    </div>`;
+  }).join('') : '';
+
+  return `<div class="prow" onclick="toggleProjDetail('${p.cislo}',event)">
     <div class="prow-num">${p.cislo}</div>
     <div class="prow-body">
       <div class="prow-name">${p.nazov}</div>
@@ -1182,7 +1250,38 @@ function prowHtml(p) {
       </div>
     </div>
     <div class="prow-days ${dc}">${ds}</div>
+  </div>
+  <div class="proj-ulohy" id="ulohy-${p.cislo}">
+    ${ulHtml}
+    <div class="uloha-add-btn" onclick="openUlohaForm('${p.cislo}')">
+      + Pridať úlohu
+    </div>
   </div>`;
+}
+
+function toggleProjDetail(cislo, e) {
+  // Na mobile toggle, na desktope otvor edit
+  if (window.innerWidth < 600) {
+    const el = document.getElementById('ulohy-' + cislo);
+    const row = e.currentTarget;
+    if (el) { el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+  } else {
+    openEdit(cislo);
+  }
+}
+
+function openUlohaForm(cislo) {
+  const proj = projects.find(p => p.cislo === cislo);
+  document.getElementById('uProjekt').value = cislo + (proj ? ' – ' + proj.nazov : '');
+  document.getElementById('uNazov').value = '';
+  document.getElementById('uPopis').value = '';
+  document.getElementById('uTermin').value = '';
+  document.getElementById('uPriorita').value = '2';
+  document.getElementById('uProfesia').value = '';
+  document.getElementById('uPrideleny').value = '';
+  document.getElementById('ulohaModal').classList.remove('hidden');
+  document.getElementById('ulohaModal')._cislo = cislo;
+  document.getElementById('ulohaModal')._mail = null;
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────
@@ -1538,38 +1637,87 @@ async function updatePonukaInSheets(p) {
 }
 
 // ── ÚLOHA MODAL ───────────────────────────────────────────────────────────
+let ulohaTyp = 'profesia';
+
+function switchUlohaTyp(typ) {
+  ulohaTyp = typ;
+  document.getElementById('typProfesia').classList.toggle('active', typ==='profesia');
+  document.getElementById('typInterna').classList.toggle('active', typ==='interna');
+  document.getElementById('uFieldProfesia').style.display  = typ==='profesia' ? '' : 'none';
+  document.getElementById('uFieldDodavatel').style.display = typ==='profesia' ? '' : 'none';
+  document.getElementById('uFieldNazov').style.display     = typ==='interna'  ? '' : 'none';
+  document.getElementById('uFieldPrideleny').style.display = typ==='interna'  ? '' : 'none';
+}
+
 function openUlohaModal(m) {
+  switchUlohaTyp('profesia');
   const proj = projects.find(p => p.cislo === m.cislo);
-  document.getElementById('uProjekt').value = m.cislo ? m.cislo + ' – ' + (proj?.nazov || '') : '';
-  document.getElementById('uNazov').value   = m.akciaPopis || m.tema || '';
-  document.getElementById('uPopis').value   = 'Mail od: ' + m.odKoho + '\nTéma: ' + m.tema;
-  document.getElementById('uTermin').value  = m.termin || '';
-  document.getElementById('uPriorita').value = m.priorita === 'high' ? '3' : m.priorita === 'low' ? '1' : '2';
-  document.getElementById('uProfesia').value = '';
+  document.getElementById('uProjekt').value   = m.cislo ? m.cislo + ' – ' + (proj?.nazov || '') : '';
+  document.getElementById('uPopis').value     = 'Mail od: ' + m.odKoho + '\nTéma: ' + m.tema;
+  document.getElementById('uTermin').value    = m.termin || '';
+  document.getElementById('uPriorita').value  = m.priorita === 'high' ? '3' : m.priorita === 'low' ? '1' : '2';
+  document.getElementById('uProfesia').value  = '';
+  document.getElementById('uDodavatel').value = '';
+  document.getElementById('uNazov').value     = '';
   document.getElementById('uPrideleny').value = '';
   document.getElementById('ulohaModal').classList.remove('hidden');
-  document.getElementById('ulohaModal')._mail = m;
+  document.getElementById('ulohaModal')._mail  = m;
+  document.getElementById('ulohaModal')._cislo = m.cislo;
 }
 
 function closeUlohaModal() {
   document.getElementById('ulohaModal').classList.add('hidden');
 }
 
+function openUlohaForm(cislo) {
+  switchUlohaTyp('profesia');
+  const proj = projects.find(p => p.cislo === cislo);
+  document.getElementById('uProjekt').value   = cislo + (proj ? ' – ' + proj.nazov : '');
+  document.getElementById('uPopis').value     = '';
+  document.getElementById('uTermin').value    = '';
+  document.getElementById('uPriorita').value  = '2';
+  document.getElementById('uProfesia').value  = '';
+  document.getElementById('uDodavatel').value = '';
+  document.getElementById('uNazov').value     = '';
+  document.getElementById('uPrideleny').value = '';
+  document.getElementById('ulohaModal').classList.remove('hidden');
+  document.getElementById('ulohaModal')._cislo = cislo;
+  document.getElementById('ulohaModal')._mail  = null;
+}
+
 async function vytvorUlohu() {
-  const nazov     = document.getElementById('uNazov').value.trim();
-  const prideleny = document.getElementById('uPrideleny').value;
-  const termin    = document.getElementById('uTermin').value;
-  const priorita  = document.getElementById('uPriorita').value;
-  const popis     = document.getElementById('uPopis').value;
+  const modal    = document.getElementById('ulohaModal');
+  const cislo    = modal._cislo || '';
+  const termin   = document.getElementById('uTermin').value;
+  const priorita = document.getElementById('uPriorita').value;
+  const popis    = document.getElementById('uPopis').value.trim();
 
-  if (!nazov)     { showToast('Zadaj názov úlohy','err'); return; }
-  if (!prideleny) { showToast('Vyber komu prideliť','err'); return; }
+  if (!cislo) { showToast('Chýba číslo projektu','err'); return; }
 
-  // TODO: po napojení Caflou API nahradiť skutočným volaním
-  showToast('Caflou API ešte nie je prepojené','err');
-  // Keď bude Caflou:
-  // await fetch(cfg.url, {method:'POST', body: JSON.stringify({action:'caflou_uloha', nazov, prideleny, termin, priorita, popis})});
+  let nova;
+  if (ulohaTyp === 'profesia') {
+    const profesia  = document.getElementById('uProfesia').value;
+    const dodavatel = document.getElementById('uDodavatel').value.trim();
+    if (!profesia)  { showToast('Vyber profesiu','err'); return; }
+    nova = { id: Date.now(), typ:'profesia', profesia, stav:'v-rieseni',
+             lopta: dodavatel, popis, termin, priorita };
+  } else {
+    const nazov     = document.getElementById('uNazov').value.trim();
+    const prideleny = document.getElementById('uPrideleny').value;
+    if (!nazov)     { showToast('Zadaj názov úlohy','err'); return; }
+    if (!prideleny) { showToast('Vyber komu prideliť','err'); return; }
+    nova = { id: Date.now(), typ:'interna', profesia: nazov, stav:'v-rieseni',
+             lopta: prideleny, popis, termin, priorita };
+  }
+
+  if (!ulohy[cislo]) ulohy[cislo] = [];
+  ulohy[cislo].unshift(nova);
+  localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
+
   closeUlohaModal();
+  renderAll();
+  showToast('Úloha pridaná ✓','ok');
+  // TODO: Caflou API vytvorenie úlohy
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────

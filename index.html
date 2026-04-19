@@ -2527,10 +2527,10 @@ function renderPlan() {
         </div>
         <div class="plan-timeline" style="flex-direction:column;gap:0;">
           <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
-            <div style="width:180px;flex-shrink:0;"></div>${headerBars}
+            <div style="width:260px;flex-shrink:0;"></div>${headerBars}
           </div>
           <div style="display:flex;gap:3px;min-width:max-content;">
-            <div style="width:180px;flex-shrink:0;"></div>${emptyRow}
+            <div style="width:260px;flex-shrink:0;"></div>${emptyRow}
           </div>
         </div>
         ${frontaHtml}
@@ -2542,7 +2542,7 @@ function renderPlan() {
       const [cislo, sub] = key.split('-');
       const proj = projects.find(p => p.cislo === cislo);
       const nazov = proj?.nazov || cislo;
-      const nazovKratky = nazov.split(/[\s\-–]/)[0].slice(0,14);
+      const nazovKratky = nazov.slice(0,28);
       const bars = weekData.map((wd) => {
         const item = wd[key];
         if (!item) return `<div style="width:54px;height:26px;border-radius:5px;background:var(--bg3);flex-shrink:0;"></div>`;
@@ -2559,7 +2559,7 @@ function renderPlan() {
         </div>`;
       }).join('');
       return `<div style="display:flex;gap:3px;margin-bottom:2px;align-items:center;">
-        <div style="width:180px;font-size:11px;color:var(--text2);line-height:26px;flex-shrink:0;
+        <div style="width:260px;font-size:11px;color:var(--text2);line-height:26px;flex-shrink:0;
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding-right:4px;"
           onclick="openPlanModal('${cislo}')" title="${cislo} – ${nazov}">
           <span style="font-size:9px;color:var(--text3);">${cislo}</span>
@@ -2580,7 +2580,7 @@ function renderPlan() {
         flex-shrink:0;">${volno.toFixed(1)}d</div>`;
     }).join('');
     const volnoRow = `<div style="display:flex;gap:3px;margin-top:3px;align-items:center;padding-top:4px;border-top:1px dashed var(--border);">
-      <div style="width:180px;font-size:10px;color:var(--text3);font-style:italic;line-height:22px;flex-shrink:0;">voľno</div>
+      <div style="width:260px;font-size:10px;color:var(--text3);font-style:italic;line-height:22px;flex-shrink:0;">voľno</div>
       ${volnoBars}
     </div>`;
 
@@ -2595,7 +2595,7 @@ function renderPlan() {
       </div>
       <div class="plan-timeline" style="flex-direction:column;gap:0;">
         <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
-          <div style="width:180px;flex-shrink:0;"></div>${headerBars}
+          <div style="width:260px;flex-shrink:0;"></div>${headerBars}
         </div>
         <div style="min-width:max-content;">${projRows}${volnoRow}</div>
       </div>
@@ -3178,7 +3178,7 @@ function renderDnes() {
 
     if (nep) {
       const typLbl = {dovolenka:'Dovolenka', pn:'PN', ine:'Neprítomný'};
-      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:180px;">
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:260px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
           <div class="plan-avatar">${c.initials}</div>
           <div style="font-weight:600;">${c.id}</div>
@@ -3188,7 +3188,7 @@ function renderDnes() {
     }
 
     if (!udalosti.length) {
-      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:180px;">
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:260px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
           <div class="plan-avatar">${c.initials}</div>
           <div style="font-weight:600;">${c.id}</div>

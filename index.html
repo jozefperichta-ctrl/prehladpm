@@ -910,9 +910,6 @@ nav {
           <div style="width:12px;height:12px;border-radius:3px;background:var(--border);"></div> Inžiniering
         </div>
       </div>
-      <button onclick="autoPlanovanie()" class="btn-primary" style="font-size:11px;padding:7px 14px;">
-        ⚡ Automaticky naplánovať
-      </button>
     </div>
 
     <!-- Dnešný prehľad -->
@@ -2523,7 +2520,6 @@ function renderPlan() {
         <div class="plan-person-head">
           <div class="plan-avatar">${c.initials}</div>
           <div><div class="plan-name">${c.id}</div><div class="plan-role">${c.typ==='APS'?'architekt + projektant':'projektant'}</div></div>
-          <div class="plan-cap-pill cap-volny">0% záťaž</div>
         </div>
         <div class="plan-timeline" style="flex-direction:column;gap:0;">
           <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
@@ -2560,11 +2556,15 @@ function renderPlan() {
       }).join('');
       return `<div style="display:flex;gap:3px;margin-bottom:2px;align-items:center;">
         <div style="width:260px;font-size:11px;color:var(--text2);line-height:26px;flex-shrink:0;
-          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding-right:4px;"
-          onclick="openPlanModal('${cislo}')" title="${cislo} – ${nazov}">
-          <span style="font-size:9px;color:var(--text3);">${cislo}</span>
-          <span style="font-weight:600;margin-left:6px;">${nazovKratky}</span>
-          <span style="font-size:9px;color:var(--text3);margin-left:4px;background:var(--bg3);padding:1px 5px;border-radius:3px;">${subLabels[sub]||sub}</span>
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px;display:flex;align-items:center;gap:4px;">
+          <button onclick="zrusProjekt('${c.id}','${cislo}','${sub}')" title="Odstrániť projekt"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px 4px;flex-shrink:0;">×</button>
+          <span style="cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;"
+            onclick="openPlanModal('${cislo}')" title="${cislo} – ${nazov}">
+            <span style="font-size:9px;color:var(--text3);">${cislo}</span>
+            <span style="font-weight:600;margin-left:6px;">${nazovKratky}</span>
+            <span style="font-size:9px;color:var(--text3);margin-left:4px;background:var(--bg3);padding:1px 5px;border-radius:3px;">${subLabels[sub]||sub}</span>
+          </span>
         </div>
         ${bars}
       </div>`;
@@ -2591,7 +2591,6 @@ function renderPlan() {
       <div class="plan-person-head">
         <div class="plan-avatar">${c.initials}</div>
         <div><div class="plan-name">${c.id}</div><div class="plan-role">${c.typ==='APS'?'architekt + projektant':'projektant'}</div></div>
-        <div class="plan-cap-pill ${pillCls}">${Math.min(maxPct,100)}% záťaž</div>
       </div>
       <div class="plan-timeline" style="flex-direction:column;gap:0;">
         <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
@@ -2619,6 +2618,26 @@ function odstranZFronty(osoba, cislo, typ) {
   fronty[osoba] = fronty[osoba].filter(f => !(f.cislo===cislo && f.typ===typ));
   localStorage.setItem('pmFronty', JSON.stringify(fronty));
   renderPlan();
+}
+
+// Úplne zruší projekt z plánovania (z fronty aj z plány)
+function zrusProjekt(osoba, cislo, typ) {
+  // Zmazať z fronty
+  if (fronty[osoba]) {
+    fronty[osoba] = fronty[osoba].filter(f => !(f.cislo===cislo && f.typ===typ));
+  }
+  // Zmazať podsekciu z plány
+  if (plany[cislo]) {
+    plany[cislo][typ] = null;
+    // Ak už nie je žiadna fáza, zmaž celý plán
+    if (!plany[cislo].as && !plany[cislo].sz && !plany[cislo].ps) {
+      delete plany[cislo];
+    }
+  }
+  localStorage.setItem('pmFronty', JSON.stringify(fronty));
+  localStorage.setItem('pmPlany', JSON.stringify(plany));
+  renderPlan();
+  showToast('Projekt odstránený','ok');
 }
 
 function posunFrontu(osoba, idx, smer) {

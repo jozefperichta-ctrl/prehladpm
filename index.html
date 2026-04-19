@@ -2460,7 +2460,7 @@ function renderPlan() {
       const wi = Math.floor((d - monday) / (7*86400000));
       if (wi < 0 || wi >= weeks) return;
       udalosti.forEach(u => {
-        const key = u.cislo + '-' + u.sub;
+        const key = u.cislo + '|' + u.sub;
         if (!weekData[wi][key]) weekData[wi][key] = {
           cislo: u.cislo, sub: u.sub, dniSum: 0, fazaTyp: u.fazaTyp, label: u.label
         };
@@ -2474,7 +2474,7 @@ function renderPlan() {
     const firstSeen = {};
     Object.entries(dni).forEach(([denIso, udalosti]) => {
       udalosti.forEach(u => {
-        const key = u.cislo + '-' + u.sub;
+        const key = u.cislo + '|' + u.sub;
         if (!firstSeen[key] || denIso < firstSeen[key]) firstSeen[key] = denIso;
       });
     });
@@ -2535,7 +2535,7 @@ function renderPlan() {
 
     // Riadky projektov s graficky vyplnenými bunkami
     const projRows = projKeys.map(key => {
-      const [cislo, sub] = key.split('-');
+      const [cislo, sub] = key.split('|');
       const proj = projects.find(p => p.cislo === cislo);
       const nazov = proj?.nazov || cislo;
       const nazovKratky = nazov.slice(0,28);
@@ -3009,7 +3009,7 @@ function autoPlanovanie() {
     const projektFazy = {}; // cislo-sub-fazaTyp: {od, do}
     Object.entries(dni).forEach(([denIso, udalosti]) => {
       udalosti.forEach(u => {
-        const key = u.cislo + '-' + u.sub + '-' + u.fazaTyp;
+        const key = u.cislo + '|' + u.sub + '-' + u.fazaTyp;
         if (!projektFazy[key]) projektFazy[key] = {od: denIso, do: denIso, cislo: u.cislo, sub: u.sub};
         projektFazy[key].do = denIso;
       });
@@ -3023,7 +3023,7 @@ function autoPlanovanie() {
     });
 
     Object.entries(projStarts).forEach(([key, startIso]) => {
-      const [cislo, sub] = key.split('-');
+      const [cislo, sub] = key.split('|');
       if (!plany[cislo]) plany[cislo] = {};
       if (!plany[cislo][sub]) plany[cislo][sub] = {};
       plany[cislo][sub].start = startIso;

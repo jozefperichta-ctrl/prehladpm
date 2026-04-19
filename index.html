@@ -915,6 +915,10 @@ nav {
       </button>
     </div>
 
+    <!-- Dnešný prehľad -->
+    <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Dnes</div>
+    <div id="planDnes" style="margin-bottom:18px;"></div>
+
     <!-- Kapacity (s integrovanou frontou per osoba) -->
     <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Kapacity</div>
     <div id="planKapacity"></div>
@@ -923,6 +927,54 @@ nav {
     <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;">Bez projektanta</div>
     <div id="planBezProjektanta"></div>
 
+    <!-- Dovolenky a PN -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px;">
+      <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;">Dovolenky a PN</div>
+      <button onclick="openNepritModal()" class="btn-ghost" style="font-size:11px;padding:5px 12px;">+ Pridať</button>
+    </div>
+    <div id="planNeprit"></div>
+
+  </div>
+</div>
+
+<!-- MODAL – DOVOLENKY / PN -->
+<div class="overlay hidden" id="nepritModal">
+  <div class="modal">
+    <h3>Neprítomnosť</h3>
+    <div class="mfields">
+      <div class="mf full">
+        <label>Osoba</label>
+        <select id="nOsoba">
+          <option value="">Vybrať…</option>
+          <option>Jozef</option><option>Tomas</option><option>Mirka</option>
+          <option>Veronika</option><option>Erik</option><option>Lucia</option><option>Sona</option>
+        </select>
+      </div>
+      <div class="mf full">
+        <label>Typ</label>
+        <select id="nTyp">
+          <option value="dovolenka">Dovolenka</option>
+          <option value="pn">PN</option>
+          <option value="ine">Iné</option>
+        </select>
+      </div>
+      <div class="mf">
+        <label>Od</label>
+        <input type="date" id="nOd">
+      </div>
+      <div class="mf">
+        <label>Do</label>
+        <input type="date" id="nDo">
+      </div>
+      <div class="mf full">
+        <label>Poznámka</label>
+        <input type="text" id="nPozn" placeholder="Voliteľné">
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btn-ghost" onclick="closeNepritModal()">Zrušiť</button>
+      <button class="btn-primary" onclick="saveNeprit()">Uložiť</button>
+    </div>
   </div>
 </div>
 
@@ -2387,6 +2439,8 @@ function renderPlan() {
 
   const kapEl = document.getElementById('planKapacity');
   renderFronty();
+  renderDnes();
+  renderNeprit();
 
   kapEl.innerHTML = CLENOVIA.map(c => {
     const dni = schedule[c.id] || {};
@@ -2442,10 +2496,10 @@ function renderPlan() {
         </div>
         <div class="plan-timeline" style="flex-direction:column;gap:0;">
           <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
-            <div style="width:94px;flex-shrink:0;"></div>${headerBars}
+            <div style="width:180px;flex-shrink:0;"></div>${headerBars}
           </div>
           <div style="display:flex;gap:3px;min-width:max-content;">
-            <div style="width:94px;flex-shrink:0;"></div>${emptyRow}
+            <div style="width:180px;flex-shrink:0;"></div>${emptyRow}
           </div>
         </div>
       </div>`;
@@ -2465,7 +2519,7 @@ function renderPlan() {
     const projRows = projKeys.map(key => {
       const [cislo, sub] = key.split('-');
       const proj = projects.find(p => p.cislo === cislo);
-      const nazovKratky = (proj?.nazov || cislo).split(/[\s\-–]/)[0].slice(0,9);
+      const nazovFull = proj?.nazov || cislo;
       const bars = weekData.map((wd) => {
         const item = wd[key];
         if (!item) return `<div style="width:54px;height:26px;border-radius:5px;background:var(--bg3);flex-shrink:0;"></div>`;
@@ -2473,12 +2527,16 @@ function renderPlan() {
         const dniTxt = item.dniSum >= 0.3 ? `${item.dniSum.toFixed(1)}d` : '';
         return `<div style="width:54px;height:26px;border-radius:5px;background:${farby.bg};border:1px solid ${farby.bc};
           color:${farby.tc};font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;
-          flex-shrink:0;cursor:pointer;" onclick="openPlanModal('${cislo}')" title="${item.label} – ${dniTxt}">${dniTxt||'·'}</div>`;
+          flex-shrink:0;cursor:pointer;" onclick="openPlanModal('${cislo}')" title="${nazovFull} – ${item.label} – ${dniTxt}">${dniTxt||'·'}</div>`;
       }).join('');
       return `<div style="display:flex;gap:3px;margin-bottom:2px;align-items:center;">
-        <div style="width:94px;font-size:10px;font-weight:600;color:var(--text2);line-height:26px;flex-shrink:0;
+        <div style="width:180px;font-size:11px;color:var(--text2);line-height:26px;flex-shrink:0;
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding-right:4px;"
-          onclick="openPlanModal('${cislo}')" title="${cislo} – ${proj?.nazov||''}">${nazovKratky} <span style="color:var(--text3);font-weight:400;">${subLabels[sub]||sub}</span></div>
+          onclick="openPlanModal('${cislo}')" title="${cislo} – ${nazovFull}">
+          <span style="font-size:9px;color:var(--text3);">${cislo}</span>
+          <span style="font-weight:600;margin-left:5px;">${nazovFull}</span>
+          <span style="font-size:9px;color:var(--text3);margin-left:4px;">${subLabels[sub]||sub}</span>
+        </div>
         ${bars}
       </div>`;
     }).join('');
@@ -2493,7 +2551,7 @@ function renderPlan() {
         flex-shrink:0;">${volno.toFixed(1)}d</div>`;
     }).join('');
     const volnoRow = `<div style="display:flex;gap:3px;margin-top:3px;align-items:center;padding-top:3px;border-top:1px dashed var(--border);">
-      <div style="width:94px;font-size:10px;color:var(--text3);font-style:italic;line-height:26px;flex-shrink:0;">voľno</div>
+      <div style="width:180px;font-size:10px;color:var(--text3);font-style:italic;line-height:26px;flex-shrink:0;">voľno</div>
       ${volnoBars}
     </div>`;
 
@@ -2530,7 +2588,7 @@ function renderPlan() {
       </div>
       <div class="plan-timeline" style="flex-direction:column;gap:0;">
         <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
-          <div style="width:94px;flex-shrink:0;"></div>${headerBars}
+          <div style="width:180px;flex-shrink:0;"></div>${headerBars}
         </div>
         <div style="min-width:max-content;">${projRows}${volnoRow}</div>
       </div>
@@ -2641,29 +2699,34 @@ function openFrontaModal(cislo, typ) {
   dropdown.style.cssText = 'margin-top:8px;padding:10px;background:var(--bg3);border-radius:8px;';
 
   const isAS = typ === 'as';
+  const inputStyle = 'width:52px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;';
   const weekFields = isAS ? `
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
-        Kôl: <input type="number" id="${elId}-kola" value="${plan.kola||2}" min="1" max="4"
-          style="width:44px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;">
+        Kôl: <input type="number" id="${elId}-kola" value="${plan.kola||2}" min="1" max="4" style="${inputStyle}">
       </label>
       <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
-        Návrh/kolo: <input type="number" id="${elId}-navrh" value="${plan.navrh||1}" min="1" max="2"
-          style="width:44px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+        Návrh/kolo: <input type="number" id="${elId}-navrh" value="${plan.navrh||5}" min="1" max="20" style="${inputStyle}"> dní
+      </label>
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        Čakanie/kolo: <input type="number" id="${elId}-asC" value="${plan.cakanieDni||5}" min="0" max="60" style="${inputStyle}"> dní
       </label>
     </div>` : `
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
-        F1: <input type="number" id="${elId}-f1" value="${plan.f1||2}" min="1" max="3"
-          style="width:40px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+        F1: <input type="number" id="${elId}-f1" value="${plan.f1Dni||10}" min="1" max="60" style="${inputStyle}"> dní
       </label>
       <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
-        F3: <input type="number" id="${elId}-f3" value="${plan.f3||2}" min="1" max="3"
-          style="width:40px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+        F2: <input type="number" id="${elId}-f2" value="${plan.f2Dni||5}" min="0" max="60" style="${inputStyle}"> dní
       </label>
       <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
-        F4: <input type="number" id="${elId}-f4" value="${plan.f4||2}" min="1" max="3"
-          style="width:40px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;text-align:center;"> týž.
+        F3: <input type="number" id="${elId}-f3" value="${plan.f3Dni||10}" min="1" max="60" style="${inputStyle}"> dní
+      </label>
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        F4: <input type="number" id="${elId}-f4" value="${plan.f4Dni||10}" min="1" max="60" style="${inputStyle}"> dní
+      </label>
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        F5: <input type="number" id="${elId}-f5" value="${plan.f5Dni||60}" min="0" max="365" style="${inputStyle}"> dní
       </label>
     </div>`;
 
@@ -2711,17 +2774,21 @@ function potvrditFrontu(cislo, typ, elId) {
   const osoba = el?._osoba;
   if (!osoba) { showToast('Vyber projektanta','err'); return; }
 
-  // Ulož nastavenia fáz
   if (!plany[cislo]) plany[cislo] = {};
   if (typ === 'as') {
-    const kola  = parseInt(document.getElementById(`${elId}-kola`)?.value)||2;
-    const navrh = parseInt(document.getElementById(`${elId}-navrh`)?.value)||1;
-    plany[cislo].as = { ...(plany[cislo].as||{}), architekt: osoba, kola, navrh };
+    const kola    = parseInt(document.getElementById(`${elId}-kola`)?.value)||2;
+    const navrh   = parseInt(document.getElementById(`${elId}-navrh`)?.value)||5;
+    const cakanie = parseInt(document.getElementById(`${elId}-asC`)?.value)||5;
+    plany[cislo].as = { ...(plany[cislo].as||{}), architekt: osoba, kola, navrh, cakanieDni: cakanie };
   } else {
-    const f1 = parseInt(document.getElementById(`${elId}-f1`)?.value)||2;
-    const f3 = parseInt(document.getElementById(`${elId}-f3`)?.value)||2;
-    const f4 = parseInt(document.getElementById(`${elId}-f4`)?.value)||2;
-    plany[cislo][typ] = { ...(plany[cislo][typ]||{}), projektant: osoba, f1, f3, f4, f5: true };
+    const f1Dni = parseInt(document.getElementById(`${elId}-f1`)?.value)||10;
+    const f2Dni = parseInt(document.getElementById(`${elId}-f2`)?.value)||5;
+    const f3Dni = parseInt(document.getElementById(`${elId}-f3`)?.value)||10;
+    const f4Dni = parseInt(document.getElementById(`${elId}-f4`)?.value)||10;
+    const f5Dni = parseInt(document.getElementById(`${elId}-f5`)?.value)||60;
+    plany[cislo][typ] = { ...(plany[cislo][typ]||{}), projektant: osoba,
+      f1Dni, f2Dni, f3Dni, f4Dni, f5Dni,
+      f5: f5Dni > 0 };
   }
   localStorage.setItem('pmPlany', JSON.stringify(plany));
 
@@ -2733,8 +2800,11 @@ function potvrditFrontu(cislo, typ, elId) {
 // ── SIMULÁCIA ─────────────────────────────────────────────────────────────
 // ── SIMULÁCIA (denná) ─────────────────────────────────────────────────────
 // Predvolené hodnoty
+// kat:
+//   'elastic'   – elastická, trvá kým sa nevyčerpá workUnits (dniCielove*100)
+//   'kalendar'  – kalendárna fáza (čakanie), trvá pevný počet kalendárnych dní, záťaž 0
+//   'prednost'  – kalendárna fáza s prednostnou záťažou (30% F3, 10% F5)
 const FAZA_DEFAULT = {
-  // typ: {zataz%, defaultDni, kategoria}
   'f1':   {zataz:100, defaultDni:10, kat:'elastic',   label:'F1 Príprava ASR'},
   'f2':   {zataz:0,   defaultDni:5,  kat:'kalendar',  label:'F2 Čakanie'},
   'f3':   {zataz:30,  defaultDni:10, kat:'prednost',  label:'F3 Koordinácia'},
@@ -2763,8 +2833,6 @@ function jePracovnyDen(date, osoba) {
 
 // Vypočíta zoznam fáz projektu v správnom poradí (v dňoch práce)
 function buildFazyProjekt(cislo) {
-  // Vráti pole fáz { typ, zataz, dniCielove, kategoria, label, sub }
-  // sub = 'as' / 'sz' / 'ps'
   const plan = plany[cislo];
   if (!plan) return [];
   const out = [];
@@ -2772,23 +2840,27 @@ function buildFazyProjekt(cislo) {
   // AŠ
   if (plan.as) {
     const kola = plan.as.kola || 2;
-    const navrhDni = (plan.as.navrh || 1) * 5;
+    const navrhDni   = plan.as.navrh || 5;    // už v dňoch
+    const cakanieDni = plan.as.cakanieDni || 5;
     for (let k=0; k<kola; k++) {
       out.push({...FAZA_DEFAULT.asN, dniCielove: navrhDni, sub:'as', kolo:k+1,
         zataz: plan.as.zatazN ?? 100});
-      out.push({...FAZA_DEFAULT.asC, dniCielove: (plan.as.cakanieDni||5), sub:'as', kolo:k+1,
-        zataz: 0});
+      if (cakanieDni > 0) {
+        out.push({...FAZA_DEFAULT.asC, dniCielove: cakanieDni, sub:'as', kolo:k+1, zataz: 0});
+      }
     }
   }
-  // SZ a PS – rovnaká štruktúra
+  // SZ a PS – priamo v dňoch
   ['sz','ps'].forEach(sub => {
     if (!plan[sub]) return;
     const s = plan[sub];
-    out.push({...FAZA_DEFAULT.f1, dniCielove: (s.f1||2)*5, sub, zataz: s.zf1 ?? 100});
-    out.push({...FAZA_DEFAULT.f2, dniCielove: (s.f2||1)*5, sub, zataz: 0});
-    out.push({...FAZA_DEFAULT.f3, dniCielove: (s.f3||2)*5, sub, zataz: s.zf3 ?? 30});
-    out.push({...FAZA_DEFAULT.f4, dniCielove: (s.f4||2)*5, sub, zataz: s.zf4 ?? 100});
-    if (s.f5 !== false) {
+    out.push({...FAZA_DEFAULT.f1, dniCielove: s.f1Dni || 10, sub, zataz: s.zf1 ?? 100});
+    if ((s.f2Dni ?? 5) > 0) {
+      out.push({...FAZA_DEFAULT.f2, dniCielove: s.f2Dni ?? 5, sub, zataz: 0});
+    }
+    out.push({...FAZA_DEFAULT.f3, dniCielove: s.f3Dni || 10, sub, zataz: s.zf3 ?? 30});
+    out.push({...FAZA_DEFAULT.f4, dniCielove: s.f4Dni || 10, sub, zataz: s.zf4 ?? 100});
+    if (s.f5 !== false && (s.f5Dni||60) > 0) {
       out.push({...FAZA_DEFAULT.f5, dniCielove: s.f5Dni || 60, sub, zataz: s.zf5 ?? 10});
     }
   });
@@ -2801,7 +2873,7 @@ function buildFazyProjekt(cislo) {
 function simulujVsetko() {
   const today = new Date(); today.setHours(0,0,0,0);
   const START = new Date(today);
-  const MAX_DNI = 365;
+  const MAX_DNI = 500;
 
   const schedule = {};
 
@@ -2810,10 +2882,11 @@ function simulujVsetko() {
     const fronta = fronty[c.id] || [];
     if (!fronta.length) return;
 
-    const projektyState = fronta.map(item => {
+    // Každý projekt vo fronte – jeho fázy v poradí
+    const projekty = fronta.map((item, rank) => {
       const faze = buildFazyProjekt(item.cislo).filter(f => f.sub === item.typ);
       return {
-        cislo: item.cislo, sub: item.typ, faze,
+        cislo: item.cislo, sub: item.typ, faze, rank,
         fazaIdx: 0, dniVFaze: 0, kalDniVFaze: 0, hotovo: false
       };
     });
@@ -2826,14 +2899,13 @@ function simulujVsetko() {
       schedule[c.id][denIso] = [];
 
       let kapacitaDnes = 100;
-      const aktivne = projektyState.filter(p => !p.hotovo && p.fazaIdx < p.faze.length);
+      const aktivne = projekty.filter(p => !p.hotovo && p.fazaIdx < p.faze.length);
+
+      // Zber "aktuálnych fáz" – každý projekt má práve jednu aktuálnu fázu
       const aktualne = aktivne.map(p => ({ ps: p, faza: p.faze[p.fazaIdx] }));
 
-      const prednostne = aktualne.filter(a => a.faza.kat === 'prednost');
-      const kalendarne = aktualne.filter(a => a.faza.kat === 'kalendar');
-      const elastic    = aktualne.filter(a => a.faza.kat === 'elastic');
-
       // 1. Prednostné (F3, F5) – zaberú svojich 30%/10%
+      const prednostne = aktualne.filter(a => a.faza.kat === 'prednost');
       prednostne.forEach(a => {
         const z = Math.min(kapacitaDnes, a.faza.zataz);
         if (z > 0) {
@@ -2843,28 +2915,33 @@ function simulujVsetko() {
           });
           kapacitaDnes -= z;
         }
-        a.ps.dniVFaze += z/100;
         a.ps.kalDniVFaze += 1;
       });
 
-      // 2. Kalendárne (čakania) – bežia v kalendári, nezaberajú kapacitu
-      // Nezobrazujú sa vizuálne aby nezaplnili bunku
+      // 2. Kalendárne (čakania) – bežia v kalendári, nezaberajú kapacitu, nezobrazujú sa
+      const kalendarne = aktualne.filter(a => a.faza.kat === 'kalendar');
       kalendarne.forEach(a => {
         a.ps.kalDniVFaze += 1;
       });
 
-      // 3. Elastické – prvý vo fronte berie čo zostáva, potom ďalší ak ešte zvýši
-      for (let i = 0; i < elastic.length && kapacitaDnes > 0; i++) {
-        const a = elastic[i];
-        const z = Math.min(kapacitaDnes, a.faza.zataz);
+      // 3. Elastické – plnia zostávajúcu kapacitu PO PORADÍ vo fronte
+      // Prejdi všetky projekty vo fronte; pre každý skús jeho aktuálnu elastickú fázu
+      // Ak nie je elastická (napr. čaká) – preskoč na ďalší projekt
+      // Tak je kapacita vždy využitá ak existuje elastická práca
+      for (const p of aktivne) {
+        if (kapacitaDnes <= 0) break;
+        if (p.hotovo) continue;
+        const faza = p.faze[p.fazaIdx];
+        if (!faza || faza.kat !== 'elastic') continue;
+        const z = Math.min(kapacitaDnes, faza.zataz);
         if (z > 0) {
           schedule[c.id][denIso].push({
-            cislo: a.ps.cislo, sub: a.ps.sub,
-            fazaTyp: typKey(a.faza), zataz: z, label: a.faza.label
+            cislo: p.cislo, sub: p.sub,
+            fazaTyp: typKey(faza), zataz: z, label: faza.label
           });
           kapacitaDnes -= z;
-          a.ps.dniVFaze += z/100;
-          a.ps.kalDniVFaze += 1;
+          p.dniVFaze += z/100;
+          p.kalDniVFaze += 1;
         }
       }
 
@@ -2872,10 +2949,10 @@ function simulujVsetko() {
       aktualne.forEach(a => {
         const f = a.faza;
         let dokoncene = false;
-        if (f.kat === 'elastic' || f.kat === 'prednost') {
-          if (a.ps.dniVFaze >= f.dniCielove) dokoncene = true;
+        if (f.kat === 'elastic') {
+          if (a.ps.dniVFaze >= f.dniCielove - 0.001) dokoncene = true;
         }
-        if (f.kat === 'kalendar') {
+        if (f.kat === 'kalendar' || f.kat === 'prednost') {
           if (a.ps.kalDniVFaze >= f.dniCielove) dokoncene = true;
         }
         if (dokoncene) {
@@ -2886,7 +2963,7 @@ function simulujVsetko() {
         }
       });
 
-      if (projektyState.every(p => p.hotovo)) break;
+      if (projekty.every(p => p.hotovo)) break;
     }
   });
 
@@ -2981,6 +3058,141 @@ function simulujFazyV2(fazy, zataz, startWeek, maxWeeks) {
   });
 
   return result;
+}
+
+// ── NEPRÍTOMNOSTI (dovolenky/PN) ──────────────────────────────────────────
+function openNepritModal(id) {
+  const edit = id ? Object.entries(neprit).find(([o,arr]) => arr.find(x=>x.id===id)) : null;
+  document.getElementById('nOsoba').value = edit ? edit[0] : '';
+  const item = edit ? edit[1].find(x=>x.id===id) : null;
+  document.getElementById('nTyp').value  = item?.typ || 'dovolenka';
+  document.getElementById('nOd').value   = item?.od  || '';
+  document.getElementById('nDo').value   = item?.do  || '';
+  document.getElementById('nPozn').value = item?.pozn|| '';
+  document.getElementById('nepritModal').classList.remove('hidden');
+  document.getElementById('nepritModal')._editId = id;
+}
+
+function closeNepritModal() { document.getElementById('nepritModal').classList.add('hidden'); }
+
+function saveNeprit() {
+  const g = id => document.getElementById(id);
+  const osoba = g('nOsoba').value;
+  const typ   = g('nTyp').value;
+  const od    = g('nOd').value;
+  const dok   = g('nDo').value;
+  const pozn  = g('nPozn').value.trim();
+  if (!osoba || !od || !dok) { showToast('Vyplň osobu a dátumy','err'); return; }
+  if (od > dok) { showToast('Od musí byť pred Do','err'); return; }
+
+  const editId = document.getElementById('nepritModal')._editId;
+  if (editId) {
+    Object.keys(neprit).forEach(o => {
+      neprit[o] = (neprit[o]||[]).filter(x=>x.id!==editId);
+    });
+  }
+
+  if (!neprit[osoba]) neprit[osoba] = [];
+  neprit[osoba].push({id: editId || Date.now(), typ, od, do: dok, pozn});
+  localStorage.setItem('pmNeprit', JSON.stringify(neprit));
+  closeNepritModal();
+  renderPlan();
+  renderNeprit();
+  showToast('Uložené ✓','ok');
+}
+
+function deleteNeprit(osoba, id) {
+  if (!neprit[osoba]) return;
+  neprit[osoba] = neprit[osoba].filter(x => x.id !== id);
+  localStorage.setItem('pmNeprit', JSON.stringify(neprit));
+  renderPlan();
+  renderNeprit();
+}
+
+function formatDatum(iso) {
+  const d = new Date(iso);
+  return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+}
+
+function renderNeprit() {
+  const el = document.getElementById('planNeprit');
+  if (!el) return;
+  const typLbl = {dovolenka:'Dovolenka', pn:'PN', ine:'Iné'};
+  const typCol = {dovolenka:'var(--blue)', pn:'var(--red)', ine:'var(--text3)'};
+  const all = [];
+  Object.entries(neprit).forEach(([osoba, arr]) =>
+    arr.forEach(x => all.push({osoba, ...x})));
+  all.sort((a,b) => a.od.localeCompare(b.od));
+
+  if (!all.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Žiadne záznamy</div>';
+    return;
+  }
+  el.innerHTML = all.map(n => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg2);
+      border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:12px;">
+      <div style="font-weight:600;min-width:70px;">${n.osoba}</div>
+      <div style="color:${typCol[n.typ]};font-weight:600;font-size:11px;min-width:70px;">${typLbl[n.typ]}</div>
+      <div style="color:var(--text2);">${formatDatum(n.od)} – ${formatDatum(n.do)}</div>
+      <div style="color:var(--text3);font-size:11px;flex:1;">${n.pozn||''}</div>
+      <button onclick="openNepritModal(${n.id})" class="fronta-btn">✎</button>
+      <button onclick="deleteNeprit('${n.osoba}',${n.id})" class="fronta-btn" style="color:var(--red);">×</button>
+    </div>`).join('');
+}
+
+// ── DENNÝ PREHĽAD ─────────────────────────────────────────────────────────
+function renderDnes() {
+  const el = document.getElementById('planDnes');
+  if (!el) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const iso = today.toISOString().split('T')[0];
+  const schedule = window._schedule || simulujVsetko();
+
+  const karty = CLENOVIA.map(c => {
+    const dni = schedule[c.id] || {};
+    const udalosti = dni[iso] || [];
+    const nep = (neprit[c.id]||[]).find(x => iso >= x.od && iso <= x.do);
+
+    if (nep) {
+      const typLbl = {dovolenka:'Dovolenka', pn:'PN', ine:'Neprítomný'};
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:180px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div class="plan-avatar">${c.initials}</div>
+          <div style="font-weight:600;">${c.id}</div>
+        </div>
+        <div style="color:var(--orange);font-size:12px;font-weight:600;">${typLbl[nep.typ]||'Neprítomný'}</div>
+      </div>`;
+    }
+
+    if (!udalosti.length) {
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:180px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div class="plan-avatar">${c.initials}</div>
+          <div style="font-weight:600;">${c.id}</div>
+        </div>
+        <div style="color:var(--green);font-size:12px;">Voľný deň</div>
+      </div>`;
+    }
+
+    const rows = udalosti.map(u => {
+      const pr = projects.find(p => p.cislo === u.cislo);
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:4px;">
+        <div style="font-weight:600;min-width:30px;color:var(--text2);">${u.zataz}%</div>
+        <div style="flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pr?.nazov||u.cislo}</div>
+        <div style="font-size:10px;color:var(--text3);">${u.label.split(' ')[0]}</div>
+      </div>`;
+    }).join('');
+
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:240px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <div class="plan-avatar">${c.initials}</div>
+        <div style="font-weight:600;">${c.id}</div>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;">${karty}</div>`;
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────

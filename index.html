@@ -999,6 +999,14 @@ nav {
         </select>
       </div>
       <div class="mf">
+        <label>Časť dokumentácie</label>
+        <select id="fCast">
+          <option value="as">AŠ – Štúdia</option>
+          <option value="sz">SZ – Stavebný zámer</option>
+          <option value="ps" selected>PS – Projekt stavby</option>
+        </select>
+      </div>
+      <div class="mf">
         <label>Typ fázy</label>
         <select id="fTyp">
           <option value="asN">AŠ Návrh</option>
@@ -2031,6 +2039,7 @@ function openAddFazaModal(id) {
     document.getElementById('fazaModalTitle').textContent = 'Upraviť fázu';
     document.getElementById('fProjekt').value = f.cislo;
     document.getElementById('fOsoba').value   = f.osoba;
+    document.getElementById('fCast').value    = f.cast || 'ps';
     document.getElementById('fTyp').value     = f.typ;
     document.getElementById('fOd').value      = f.od;
     document.getElementById('fDo').value      = f.do;
@@ -2041,6 +2050,7 @@ function openAddFazaModal(id) {
     document.getElementById('fazaModalTitle').textContent = 'Nová fáza';
     document.getElementById('fProjekt').value = '';
     document.getElementById('fOsoba').value   = '';
+    document.getElementById('fCast').value    = 'ps';
     document.getElementById('fTyp').value     = 'f1';
     document.getElementById('fOd').value      = new Date().toISOString().split('T')[0];
     const zajtra = new Date(); zajtra.setDate(zajtra.getDate()+7);
@@ -2060,6 +2070,7 @@ function saveFaza() {
   const g = id => document.getElementById(id);
   const cislo = g('fProjekt').value;
   const osoba = g('fOsoba').value;
+  const cast  = g('fCast').value;
   const typ   = g('fTyp').value;
   const od    = g('fOd').value;
   const dok   = g('fDo').value;
@@ -2072,9 +2083,9 @@ function saveFaza() {
   const editId = document.getElementById('fazaModal')._editId;
   if (editId) {
     const f = fazy.find(x => x.id === editId);
-    if (f) Object.assign(f, {cislo, osoba, typ, od, do: dok, pozn});
+    if (f) Object.assign(f, {cislo, osoba, cast, typ, od, do: dok, pozn});
   } else {
-    fazy.push({id: Date.now(), cislo, osoba, typ, od, do: dok, pozn});
+    fazy.push({id: Date.now(), cislo, osoba, cast, typ, od, do: dok, pozn});
   }
   localStorage.setItem('pmFazyManual', JSON.stringify(fazy));
   closeFazaModal();
@@ -2219,14 +2230,15 @@ function renderKalendar() {
       const width = (Math.min(totalDays-1, doIdx) - Math.max(0, odIdx) + 1) * dayWidth;
       const proj = projects.find(p => p.cislo === f.cislo);
       const nazov = proj?.nazov || f.cislo;
+      const castLbl = {as:'AŠ', sz:'SZ', ps:'PS'}[f.cast] || '';
       return `<div onclick="openAddFazaModal(${f.id})"
         style="position:absolute;left:${left}px;width:${width-2}px;top:4px;height:22px;
         background:${farby.bg};border:1px solid ${farby.bc};border-radius:5px;
         color:${farby.tc};font-size:10px;font-weight:600;
         display:flex;align-items:center;padding:0 6px;cursor:pointer;overflow:hidden;
         white-space:nowrap;"
-        title="${farby.lbl} – ${nazov} – ${formatDatum(f.od)} až ${formatDatum(f.do)}">
-        ${farby.lbl} ${nazov}
+        title="${nazov} ${castLbl} – ${farby.lbl} – ${formatDatum(f.od)} až ${formatDatum(f.do)}">
+        ${castLbl?castLbl+' ':''}${farby.lbl} ${nazov}
       </div>`;
     }).join('');
 

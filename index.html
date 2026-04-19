@@ -915,13 +915,9 @@ nav {
       </button>
     </div>
 
-    <!-- Kapacity -->
+    <!-- Kapacity (s integrovanou frontou per osoba) -->
     <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Kapacity</div>
     <div id="planKapacity"></div>
-
-    <!-- Fronty per projektant -->
-    <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;">Fronty projektov</div>
-    <div id="planFronty"></div>
 
     <!-- Neplánované projekty -->
     <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;">Bez projektanta</div>
@@ -2504,6 +2500,28 @@ function renderPlan() {
     const maxPct = Math.round(Math.max(...zatozArr.slice(0,8)));
     const pillCls = maxPct >= 80 ? 'cap-obsadeny' : maxPct >= 30 ? 'cap-ciastocne' : 'cap-volny';
 
+    // Fronta projektov per osoba
+    const myFronta = fronty[c.id] || [];
+    const typLabels = {as:'AŠ', sz:'SZ', ps:'PS'};
+    const frontaHtml = myFronta.length ? `
+      <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--bg3);">
+        <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Poradie</div>
+        ${myFronta.map((item,idx) => {
+          const pr = projects.find(p => p.cislo===item.cislo);
+          return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);min-width:18px;">${idx+1}.</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);min-width:48px;">${item.cislo}</div>
+            <div style="flex:1;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pr?.nazov||''}</div>
+            <div style="font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg2);color:var(--text3);border:1px solid var(--border);">${typLabels[item.typ]||item.typ}</div>
+            <div style="display:flex;gap:3px;">
+              <button class="fronta-btn" onclick="posunFrontu('${c.id}',${idx},-1)" ${idx===0?'disabled':''}>↑</button>
+              <button class="fronta-btn" onclick="posunFrontu('${c.id}',${idx},1)" ${idx===myFronta.length-1?'disabled':''}>↓</button>
+              <button class="fronta-btn" style="color:var(--red);" onclick="odstranZFronty('${c.id}','${item.cislo}','${item.typ}')">×</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '';
+
     return `<div class="plan-person">
       <div class="plan-person-head">
         <div class="plan-avatar">${c.initials}</div>
@@ -2516,6 +2534,7 @@ function renderPlan() {
         </div>
         <div style="min-width:max-content;">${projRows}${volnoRow}</div>
       </div>
+      ${frontaHtml}
     </div>`;
   }).join('');
 }
@@ -2534,7 +2553,7 @@ function odstranZFronty(osoba, cislo, typ) {
   if (!fronty[osoba]) return;
   fronty[osoba] = fronty[osoba].filter(f => !(f.cislo===cislo && f.typ===typ));
   localStorage.setItem('pmFronty', JSON.stringify(fronty));
-  renderFronty();
+  renderPlan();
 }
 
 function posunFrontu(osoba, idx, smer) {
@@ -2543,50 +2562,13 @@ function posunFrontu(osoba, idx, smer) {
   if (newIdx < 0 || newIdx >= f.length) return;
   [f[idx], f[newIdx]] = [f[newIdx], f[idx]];
   localStorage.setItem('pmFronty', JSON.stringify(fronty));
-  renderFronty();
+  renderPlan();
 }
 
 function renderFronty() {
-  const el = document.getElementById('planFronty');
   const el2 = document.getElementById('planBezProjektanta');
-  if (!el) return;
-
-  // Projekty s frontou
+  if (!el2) return;
   const typLabels = {as:'AŠ', sz:'SZ', ps:'PS'};
-  el.innerHTML = CLENOVIA.map(c => {
-    const f = fronty[c.id] || [];
-    if (!f.length) return `<div class="fronta-osoba">
-      <div class="fronta-head">
-        <div class="plan-avatar">${c.initials}</div>
-        <span>${c.id}</span>
-        <span style="font-size:11px;color:var(--text3);margin-left:auto;">prázdná fronta</span>
-      </div>
-    </div>`;
-
-    const items = f.map((item, idx) => {
-      const proj = projects.find(p => p.cislo===item.cislo);
-      return `<div class="fronta-item">
-        <div style="font-size:12px;font-weight:600;color:var(--text3);min-width:20px;">${idx+1}.</div>
-        <div class="fronta-num">${item.cislo}</div>
-        <div class="fronta-nazov">${proj?.nazov||''}</div>
-        <div class="fronta-typ">${typLabels[item.typ]||item.typ}</div>
-        <div class="fronta-btns">
-          <button class="fronta-btn" onclick="posunFrontu('${c.id}',${idx},-1)" ${idx===0?'disabled':''}>↑</button>
-          <button class="fronta-btn" onclick="posunFrontu('${c.id}',${idx},1)" ${idx===f.length-1?'disabled':''}>↓</button>
-          <button class="fronta-btn" style="color:var(--red);" onclick="odstranZFronty('${c.id}','${item.cislo}','${item.typ}')">×</button>
-        </div>
-      </div>`;
-    }).join('');
-
-    return `<div class="fronta-osoba">
-      <div class="fronta-head">
-        <div class="plan-avatar">${c.initials}</div>
-        <span>${c.id}</span>
-        <span style="font-size:11px;color:var(--text3);margin-left:auto;">${f.length} v&nbsp;poradí</span>
-      </div>
-      ${items}
-    </div>`;
-  }).join('');
 
   // Projekty bez projektanta – zobraz všetky aktívne projekty
   // Fázy ktoré už sú vo fronte alebo naplánované = zobraz ako "zaradené"

@@ -2557,8 +2557,8 @@ function renderPlan() {
       return `<div style="display:flex;gap:3px;margin-bottom:2px;align-items:center;">
         <div style="width:260px;font-size:11px;color:var(--text2);line-height:26px;flex-shrink:0;
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px;display:flex;align-items:center;gap:4px;">
-          <button onclick="zrusProjekt('${c.id}','${cislo}','${sub}')" title="Odstrániť projekt"
-            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px 4px;flex-shrink:0;">×</button>
+          <button onclick="event.stopPropagation();zrusProjekt('${c.id}','${cislo}','${sub}')" title="Odstrániť projekt"
+            style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--red);font-size:12px;padding:0 6px;flex-shrink:0;line-height:20px;">×</button>
           <span style="cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;"
             onclick="openPlanModal('${cislo}')" title="${cislo} – ${nazov}">
             <span style="font-size:9px;color:var(--text3);">${cislo}</span>

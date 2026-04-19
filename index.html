@@ -1285,6 +1285,7 @@ let budgets   = JSON.parse(localStorage.getItem('pmBudgets') || '{}');
 let ulohy     = JSON.parse(localStorage.getItem('pmUlohy') || '{}');
 let plany     = JSON.parse(localStorage.getItem('pmPlany') || '{}');
 let fronty    = JSON.parse(localStorage.getItem('pmFronty') || '{}');
+let neprit    = JSON.parse(localStorage.getItem('pmNeprit') || '{}');  // dovolenky/PN per osoba
 let cfg       = JSON.parse(localStorage.getItem('pmCfg3')   || '{}');
 let maily     = [];
 let stavFilter = 'all';
@@ -2376,7 +2377,6 @@ function getProjektWeeksForOsoba(cislo, osoba) {
 function renderPlan() {
   const today = new Date(); today.setHours(0,0,0,0);
   const weeks = 20;
-  const VAHA = {full:100, coord:30, wait:0, inz:10, pause:0};
 
   const monday = new Date(today);
   monday.setDate(monday.getDate() - (monday.getDay()||7) + 1);
@@ -2385,28 +2385,55 @@ function renderPlan() {
   });
   const weekLbls = weekStarts.map(d => `${d.getDate()}.${d.getMonth()+1}.`);
 
+  // Vypočítaj schedule
+  const schedule = simulujVsetko();
+  window._schedule = schedule;
+
   const kapEl = document.getElementById('planKapacity');
-  const frontaEl = document.getElementById('planFronta');
-  const sPlany = projects.filter(p => {
-    const plan = plany[p.cislo];
-    if (!plan || p.faza === 'Ukončený') return false;
-    return plan.as || plan.sz || plan.ps;
-  });
-  const bezPlanu = [];
   renderFronty();
 
   kapEl.innerHTML = CLENOVIA.map(c => {
-    const mojeProjekty = sPlany.filter(p => {
-      const plan = plany[p.cislo];
-      if (!plan) return false;
-      return (plan.as?.architekt === c.id) || (plan.sz?.projektant === c.id) || (plan.ps?.projektant === c.id);
+    const dni = schedule[c.id] || {};
+
+    // Zbor per týždeň: {cislo-sub: {zataz, fazaTyp, dni: count}}
+    const weekData = Array.from({length:weeks}, () => ({}));
+    Object.entries(dni).forEach(([denIso, udalosti]) => {
+      const d = new Date(denIso);
+      const wi = Math.floor((d - monday) / (7*86400000));
+      if (wi < 0 || wi >= weeks) return;
+      udalosti.forEach(u => {
+        const key = u.cislo + '-' + u.sub;
+        if (!weekData[wi][key]) weekData[wi][key] = {
+          cislo: u.cislo, sub: u.sub, zataz: 0, fazaTyp: u.fazaTyp, dniSum: 0, label: u.label
+        };
+        weekData[wi][key].zataz += u.zataz;
+        weekData[wi][key].dniSum += u.zataz/100;
+        weekData[wi][key].fazaTyp = u.fazaTyp;
+      });
     });
+
+    // Zisti aktívne projekty per osoba – podľa prvého výskytu v schedule
+    const firstSeen = {};  // key: cislo-sub -> denIso
+    Object.entries(dni).forEach(([denIso, udalosti]) => {
+      udalosti.forEach(u => {
+        const key = u.cislo + '-' + u.sub;
+        if (!firstSeen[key] || denIso < firstSeen[key]) firstSeen[key] = denIso;
+      });
+    });
+
+    // Zoraď projekty podľa prvého začiatku
+    const projKeys = Object.keys(firstSeen).sort((a,b) => firstSeen[a].localeCompare(firstSeen[b]));
 
     const headerBars = weekLbls.map(lbl =>
       `<div style="width:54px;text-align:center;font-size:9px;color:var(--text3);flex-shrink:0;">${lbl}</div>`
     ).join('');
 
-    if (!mojeProjekty.length) {
+    // Celková záťaž per týždeň
+    const zatozArr = weekData.map(wd =>
+      Math.min(130, Object.values(wd).reduce((s,x) => s+x.zataz/5, 0)) // x.zataz je súčet cez dni, /5 = avg %
+    );
+
+    if (!projKeys.length) {
       const emptyRow = Array(weeks).fill(0).map(() =>
         `<div style="width:54px;height:26px;border-radius:5px;background:var(--grn-bg);border:1px solid var(--grn-bd);flex-shrink:0;"></div>`
       ).join('');
@@ -2418,46 +2445,48 @@ function renderPlan() {
         </div>
         <div class="plan-timeline" style="flex-direction:column;gap:0;">
           <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
-            <div style="width:58px;flex-shrink:0;"></div>${headerBars}
+            <div style="width:94px;flex-shrink:0;"></div>${headerBars}
           </div>
           <div style="display:flex;gap:3px;min-width:max-content;">
-            <div style="width:58px;flex-shrink:0;"></div>${emptyRow}
+            <div style="width:94px;flex-shrink:0;"></div>${emptyRow}
           </div>
         </div>
       </div>`;
     }
 
-    const zatozArr = Array(weeks).fill(0);
-    const projRows = mojeProjekty.map(proj => {
-      const pw = getProjektWeeksForOsoba(proj.cislo, c.id);
-      const row = Array(weeks).fill(null);
-      pw.forEach(w => {
-        const wi = Math.round((w.weekStart - monday) / (7*86400000));
-        if (wi >= 0 && wi < weeks) {
-          row[wi] = w;
-          zatozArr[wi] = Math.min(130, zatozArr[wi] + (VAHA[w.typ]||0));
-        }
-      });
-      const skratka = proj.cislo.slice(-3);
-      const bars = row.map((w, i) => {
-        if (!w) return `<div style="width:54px;height:26px;border-radius:5px;background:var(--bg3);flex-shrink:0;"></div>`;
-        const bg = {full:'#E24B4A22',coord:'var(--ora-bg)',wait:'var(--bg3)',inz:'var(--border)',pause:'var(--bg3)'}[w.typ]||'var(--bg3)';
-        const bc = {full:'#E24B4A66',coord:'var(--ora-bd)',wait:'var(--border)',inz:'var(--border2)',pause:'var(--border2)'}[w.typ]||'var(--border)';
-        const tc = {full:'#A32D2D',coord:'var(--orange)',wait:'var(--text3)',inz:'var(--text3)',pause:'var(--text3)'}[w.typ]||'var(--text3)';
-        return `<div style="width:54px;height:26px;border-radius:5px;background:${bg};border:1px solid ${bc};
-          color:${tc};font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;
-          flex-shrink:0;cursor:pointer;" onclick="openPlanModal('${proj.cislo}')" title="${proj.nazov}">${skratka}</div>`;
+    const subLabels = {as:'AŠ', sz:'SZ', ps:'PS'};
+    const fazaFarby = {
+      f1:{bg:'#E24B4A22',bc:'#E24B4A66',tc:'#A32D2D'},
+      f2:{bg:'var(--bg3)',bc:'var(--border)',tc:'var(--text3)'},
+      f3:{bg:'var(--ora-bg)',bc:'var(--ora-bd)',tc:'var(--orange)'},
+      f4:{bg:'#E24B4A22',bc:'#E24B4A66',tc:'#A32D2D'},
+      f5:{bg:'var(--border)',bc:'var(--border2)',tc:'var(--text3)'},
+      asN:{bg:'#378ADD22',bc:'#378ADD66',tc:'#185FA5'},
+      asC:{bg:'var(--bg3)',bc:'var(--border)',tc:'var(--text3)'},
+    };
+
+    const projRows = projKeys.map(key => {
+      const [cislo, sub] = key.split('-');
+      const proj = projects.find(p => p.cislo === cislo);
+      const nazovKratky = (proj?.nazov || cislo).split(/[\s\-–]/)[0].slice(0,9);
+      const bars = weekData.map((wd) => {
+        const item = wd[key];
+        if (!item) return `<div style="width:54px;height:26px;border-radius:5px;background:var(--bg3);flex-shrink:0;"></div>`;
+        const farby = fazaFarby[item.fazaTyp] || fazaFarby.f2;
+        const dniTxt = item.dniSum >= 0.5 ? `${item.dniSum.toFixed(1)}d` : '';
+        return `<div style="width:54px;height:26px;border-radius:5px;background:${farby.bg};border:1px solid ${farby.bc};
+          color:${farby.tc};font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;
+          flex-shrink:0;cursor:pointer;" onclick="openPlanModal('${cislo}')" title="${item.label} – ${dniTxt}">${dniTxt||item.fazaTyp}</div>`;
       }).join('');
-      const nazovKratky = proj.nazov.split(/[\s\-–]/)[0].slice(0,9);
       return `<div style="display:flex;gap:3px;margin-bottom:2px;align-items:center;">
-        <div style="width:58px;font-size:10px;font-weight:600;color:var(--text2);line-height:26px;flex-shrink:0;
-          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;"
-          onclick="openPlanModal('${proj.cislo}')" title="${proj.cislo} – ${proj.nazov}">${nazovKratky}</div>
+        <div style="width:94px;font-size:10px;font-weight:600;color:var(--text2);line-height:26px;flex-shrink:0;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;padding-right:4px;"
+          onclick="openPlanModal('${cislo}')" title="${cislo} – ${proj?.nazov||''}">${nazovKratky} <span style="color:var(--text3);font-weight:400;">${subLabels[sub]||sub}</span></div>
         ${bars}
       </div>`;
     }).join('');
 
-    const maxPct = Math.max(...zatozArr.slice(0,8));
+    const maxPct = Math.round(Math.max(...zatozArr.slice(0,8)));
     const pillCls = maxPct >= 80 ? 'cap-obsadeny' : maxPct >= 30 ? 'cap-ciastocne' : 'cap-volny';
 
     return `<div class="plan-person">
@@ -2468,7 +2497,7 @@ function renderPlan() {
       </div>
       <div class="plan-timeline" style="flex-direction:column;gap:0;">
         <div style="display:flex;gap:3px;padding-bottom:3px;min-width:max-content;">
-          <div style="width:58px;flex-shrink:0;"></div>${headerBars}
+          <div style="width:94px;flex-shrink:0;"></div>${headerBars}
         </div>
         <div style="min-width:max-content;">${projRows}</div>
       </div>
@@ -2705,70 +2734,229 @@ function potvrditFrontu(cislo, typ, elId) {
 }
 
 // ── SIMULÁCIA ─────────────────────────────────────────────────────────────
-function autoPlanovanie() {
+// ── SIMULÁCIA (denná) ─────────────────────────────────────────────────────
+// Predvolené hodnoty
+const FAZA_DEFAULT = {
+  // typ: {zataz%, defaultDni, kategoria}
+  'f1':   {zataz:100, defaultDni:10, kat:'elastic',   label:'F1 Príprava ASR'},
+  'f2':   {zataz:0,   defaultDni:5,  kat:'kalendar',  label:'F2 Čakanie'},
+  'f3':   {zataz:30,  defaultDni:10, kat:'prednost',  label:'F3 Koordinácia'},
+  'f4':   {zataz:100, defaultDni:10, kat:'elastic',   label:'F4 Dopracovanie'},
+  'f5':   {zataz:10,  defaultDni:0,  kat:'prednost',  label:'F5 Inžiniering'},
+  'asN':  {zataz:100, defaultDni:5,  kat:'elastic',   label:'AŠ Návrh'},
+  'asC':  {zataz:0,   defaultDni:5,  kat:'kalendar',  label:'AŠ Čakanie'},
+};
+
+// Slovenské sviatky (základné)
+const SVIATKY = [
+  '01-01', '01-06', '05-01', '05-08', '07-05', '08-29',
+  '09-01', '09-15', '11-01', '11-17', '12-24', '12-25', '12-26'
+];
+
+function jePracovnyDen(date, osoba) {
+  const dow = date.getDay();
+  if (dow === 0 || dow === 6) return false;
+  const md = String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+  if (SVIATKY.includes(md)) return false;
+  // Kontrola neprítomností
+  const n = neprit[osoba] || [];
+  const iso = date.toISOString().split('T')[0];
+  return !n.some(x => iso >= x.od && iso <= x.do);
+}
+
+// Vypočíta zoznam fáz projektu v správnom poradí (v dňoch práce)
+function buildFazyProjekt(cislo) {
+  // Vráti pole fáz { typ, zataz, dniCielove, kategoria, label, sub }
+  // sub = 'as' / 'sz' / 'ps'
+  const plan = plany[cislo];
+  if (!plan) return [];
+  const out = [];
+
+  // AŠ
+  if (plan.as) {
+    const kola = plan.as.kola || 2;
+    const navrhDni = (plan.as.navrh || 1) * 5;
+    for (let k=0; k<kola; k++) {
+      out.push({...FAZA_DEFAULT.asN, dniCielove: navrhDni, sub:'as', kolo:k+1,
+        zataz: plan.as.zatazN ?? 100});
+      out.push({...FAZA_DEFAULT.asC, dniCielove: (plan.as.cakanieDni||5), sub:'as', kolo:k+1,
+        zataz: 0});
+    }
+  }
+  // SZ a PS – rovnaká štruktúra
+  ['sz','ps'].forEach(sub => {
+    if (!plan[sub]) return;
+    const s = plan[sub];
+    out.push({...FAZA_DEFAULT.f1, dniCielove: (s.f1||2)*5, sub, zataz: s.zf1 ?? 100});
+    out.push({...FAZA_DEFAULT.f2, dniCielove: (s.f2||1)*5, sub, zataz: 0});
+    out.push({...FAZA_DEFAULT.f3, dniCielove: (s.f3||2)*5, sub, zataz: s.zf3 ?? 30});
+    out.push({...FAZA_DEFAULT.f4, dniCielove: (s.f4||2)*5, sub, zataz: s.zf4 ?? 100});
+    if (s.f5 !== false) {
+      out.push({...FAZA_DEFAULT.f5, dniCielove: s.f5Dni || 60, sub, zataz: s.zf5 ?? 10});
+    }
+  });
+  return out;
+}
+
+// Hlavná simulačná funkcia – ide deň po dni
+// Pre každého projektanta vezme jeho fronty (poradia projektov)
+// a rozhodí prácu podľa kapacity
+function simulujVsetko() {
   const today = new Date(); today.setHours(0,0,0,0);
-  const monday = new Date(today);
-  monday.setDate(monday.getDate() - (monday.getDay()||7) + 1);
-  const MAX_WEEKS = 52;
-  const VAHA = {full:100, coord:30, wait:0, inz:10, pause:0};
+  const START = new Date(today);
+  const MAX_DNI = 365;
+
+  // Výsledok: {osoba: {denIso: [{cislo, sub, fazaTyp, zataz, dniPrideleneHoy}]}}
+  const schedule = {};
 
   CLENOVIA.forEach(c => {
-    const fronta = (fronty[c.id] || []).slice();
+    schedule[c.id] = {};
+    const fronta = fronty[c.id] || [];
     if (!fronta.length) return;
 
-    // Zostav záťaž z existujúcich plánov (len tie čo NIE sú vo fronte)
-    const zataz = Array(MAX_WEEKS).fill(0);
-    Object.keys(plany).forEach(cislo => {
-      if (fronta.find(f => f.cislo===cislo)) return;
-      const pw = getProjektWeeksForOsoba(cislo, c.id);
-      pw.forEach(w => {
-        const wi = Math.round((w.weekStart - monday) / (7*86400000));
-        if (wi >= 0 && wi < MAX_WEEKS) zataz[wi] = Math.min(200, zataz[wi] + (VAHA[w.typ]||0));
+    // Pre každý projekt vo fronte zober jeho fázy (tie ktoré mu patria)
+    // Každý projekt má svoj "stav" – aktuálnu fázu a napredovanie
+    const projektyState = fronta.map(item => {
+      const faze = buildFazyProjekt(item.cislo).filter(f => f.sub === item.typ);
+      return {
+        cislo: item.cislo,
+        sub: item.typ,
+        faze,
+        fazaIdx: 0,
+        dniVFaze: 0,       // koľko dní sa už odpracovalo v tejto fáze
+        kalDniVFaze: 0,    // koľko kalendárnych dní beží fáza (pre fixné)
+        hotovo: false
+      };
+    });
+
+    // Simuluj deň po dni
+    for (let d = 0; d < MAX_DNI; d++) {
+      const date = new Date(START.getTime() + d*86400000);
+      if (!jePracovnyDen(date, c.id)) continue;
+
+      const denIso = date.toISOString().split('T')[0];
+      schedule[c.id][denIso] = [];
+
+      // 1. Zober "prednostné" fázy (F3, F5) všetkých aktívnych projektov
+      // 2. Pozri koľko kapacity zostáva
+      // 3. Zvyšok rozdeľ medzi elastické fázy podľa poradia vo fronte
+
+      let kapacitaDnes = 100;
+      const aktivne = projektyState.filter(p => !p.hotovo && p.fazaIdx < p.faze.length);
+
+      // Pre každý aktívny projekt zisti aktuálnu fázu
+      const aktualne = aktivne.map(p => ({
+        ps: p,
+        faza: p.faze[p.fazaIdx]
+      }));
+
+      // Prednostné fázy: odoberú kapacitu podľa svojej záťaže
+      const prednostne = aktualne.filter(a => a.faza.kat === 'prednost');
+      const kalendarne = aktualne.filter(a => a.faza.kat === 'kalendar');
+      const elastic    = aktualne.filter(a => a.faza.kat === 'elastic');
+
+      // Prednostné – zapíš záťaž, odober kapacitu
+      prednostne.forEach(a => {
+        const z = Math.min(kapacitaDnes, a.faza.zataz);
+        if (z > 0) {
+          schedule[c.id][denIso].push({
+            cislo: a.ps.cislo, sub: a.ps.sub,
+            fazaTyp: typKey(a.faza), zataz: z, label: a.faza.label
+          });
+          kapacitaDnes -= z;
+        }
+        a.ps.dniVFaze += z/100;
+        a.ps.kalDniVFaze += 1;
+      });
+
+      // Kalendárne (čakania) – nemajú záťaž ale bežia v kalendári
+      kalendarne.forEach(a => {
+        schedule[c.id][denIso].push({
+          cislo: a.ps.cislo, sub: a.ps.sub,
+          fazaTyp: typKey(a.faza), zataz: 0, label: a.faza.label
+        });
+        a.ps.kalDniVFaze += 1;
+      });
+
+      // Elastické – prvý vo fronte berie celú zostávajúcu kapacitu
+      if (elastic.length > 0 && kapacitaDnes > 0) {
+        const a = elastic[0]; // prvý vo fronte
+        const z = Math.min(kapacitaDnes, a.faza.zataz);
+        schedule[c.id][denIso].push({
+          cislo: a.ps.cislo, sub: a.ps.sub,
+          fazaTyp: typKey(a.faza), zataz: z, label: a.faza.label
+        });
+        kapacitaDnes -= z;
+        a.ps.dniVFaze += z/100;
+        a.ps.kalDniVFaze += 1;
+      }
+
+      // Posuň fázy ktoré sa dokončili
+      aktualne.forEach(a => {
+        const f = a.faza;
+        let dokoncene = false;
+        if (f.kat === 'elastic' || f.kat === 'prednost') {
+          if (a.ps.dniVFaze >= f.dniCielove) dokoncene = true;
+        }
+        if (f.kat === 'kalendar') {
+          if (a.ps.kalDniVFaze >= f.dniCielove) dokoncene = true;
+        }
+        if (dokoncene) {
+          a.ps.fazaIdx++;
+          a.ps.dniVFaze = 0;
+          a.ps.kalDniVFaze = 0;
+          if (a.ps.fazaIdx >= a.ps.faze.length) a.ps.hotovo = true;
+        }
+      });
+
+      // Ak všetky projekty hotové – ukonči
+      if (projektyState.every(p => p.hotovo)) break;
+    }
+  });
+
+  return schedule;
+}
+
+function typKey(faza) {
+  return Object.keys(FAZA_DEFAULT).find(k => FAZA_DEFAULT[k].label === faza.label) || '?';
+}
+
+// ── SIMULÁCIA ─────────────────────────────────────────────────────────────
+function autoPlanovanie() {
+  const schedule = simulujVsetko();
+
+  // Ulož schedule do plany – pre každý projekt nájdi prvý a posledný deň každej fázy
+  Object.entries(schedule).forEach(([osoba, dni]) => {
+    const projektFazy = {}; // cislo-sub-fazaTyp: {od, do}
+    Object.entries(dni).forEach(([denIso, udalosti]) => {
+      udalosti.forEach(u => {
+        const key = u.cislo + '-' + u.sub + '-' + u.fazaTyp;
+        if (!projektFazy[key]) projektFazy[key] = {od: denIso, do: denIso, cislo: u.cislo, sub: u.sub};
+        projektFazy[key].do = denIso;
       });
     });
 
-    fronta.forEach(item => {
-      const fazy = buildFazy(item.cislo, item.typ);
-      if (!fazy.length) return;
+    // Pre každý projekt nastav start podľa prvej fázy
+    const projStarts = {};
+    Object.values(projektFazy).forEach(pf => {
+      const k = pf.cislo + '-' + pf.sub;
+      if (!projStarts[k] || pf.od < projStarts[k]) projStarts[k] = pf.od;
+    });
 
-      let startWeek = 0;
-      while (startWeek < MAX_WEEKS && zataz[startWeek] >= 100) startWeek++;
-
-      const weekMap = simulujFazyV2(fazy, zataz, startWeek, MAX_WEEKS);
-      if (!weekMap.length) return;
-
-      const startDate = new Date(monday.getTime() + weekMap[0].week*7*86400000);
-      if (!plany[item.cislo]) plany[item.cislo] = {};
-      const existingPlan = plany[item.cislo]?.[item.typ] || {};
-
-      if (item.typ === 'as') {
-        plany[item.cislo].as = {
-          architekt: c.id,
-          start: startDate.toISOString().split('T')[0],
-          kola: existingPlan.kola || 2,
-          navrh: existingPlan.navrh || 1,
-        };
-      } else {
-        plany[item.cislo][item.typ] = {
-          projektant: c.id,
-          start: startDate.toISOString().split('T')[0],
-          f1: existingPlan.f1 || 2,
-          f3: existingPlan.f3 || 2,
-          f4: existingPlan.f4 || 2,
-          f5: existingPlan.f5 !== false,
-        };
-      }
-
-      weekMap.forEach(w => {
-        if (w.week >= 0 && w.week < MAX_WEEKS)
-          zataz[w.week] = Math.min(200, zataz[w.week] + (VAHA[w.typ]||0));
-      });
+    Object.entries(projStarts).forEach(([key, startIso]) => {
+      const [cislo, sub] = key.split('-');
+      if (!plany[cislo]) plany[cislo] = {};
+      if (!plany[cislo][sub]) plany[cislo][sub] = {};
+      plany[cislo][sub].start = startIso;
+      if (sub === 'as') plany[cislo][sub].architekt = osoba;
+      else plany[cislo][sub].projektant = osoba;
     });
   });
 
   localStorage.setItem('pmPlany', JSON.stringify(plany));
+  window._schedule = schedule;
   renderPlan();
-  showToast('Plán aktualizovaný ✓','ok');
+  showToast('Plán vypočítaný ✓','ok');
 }
 
 function buildFazy(cislo, typ) {

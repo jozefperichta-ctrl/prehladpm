@@ -917,7 +917,10 @@ nav {
     <div id="planDnes" style="margin-bottom:18px;"></div>
 
     <!-- Kapacity (s integrovanou frontou per osoba) -->
-    <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Kapacity</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;">Kapacity</div>
+      <button onclick="vymazVsetkoPlanovanie()" class="btn-ghost" style="font-size:11px;padding:5px 12px;color:var(--red);border-color:var(--red-bd);">Vymazať celý plán</button>
+    </div>
     <div id="planKapacity"></div>
 
     <!-- Neplánované projekty -->
@@ -2618,6 +2621,17 @@ function odstranZFronty(osoba, cislo, typ) {
   fronty[osoba] = fronty[osoba].filter(f => !(f.cislo===cislo && f.typ===typ));
   localStorage.setItem('pmFronty', JSON.stringify(fronty));
   renderPlan();
+}
+
+// Vymaže celé plánovanie – vráti do prázdneho stavu
+function vymazVsetkoPlanovanie() {
+  if (!confirm('Naozaj vymazať celý plán? Projekty v sekcii "Bez projektanta" zostanú.')) return;
+  plany = {};
+  fronty = {};
+  localStorage.setItem('pmPlany', JSON.stringify(plany));
+  localStorage.setItem('pmFronty', JSON.stringify(fronty));
+  renderPlan();
+  showToast('Plán vymazaný','ok');
 }
 
 // Úplne zruší projekt z plánovania (z fronty aj z plány)

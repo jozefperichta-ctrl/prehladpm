@@ -986,9 +986,15 @@ nav {
     <div class="mfields">
       <div class="mf full">
         <label>Projekt</label>
-        <select id="fProjekt">
-          <option value="">Vybrať…</option>
-        </select>
+        <div class="proj-search-wrap">
+          <input type="text" id="fProjQ" placeholder="Hľadať projekt…" oninput="onFProjQ()" autocomplete="off">
+          <div class="proj-dropdown" id="fProjDrop"></div>
+        </div>
+        <div class="proj-selected" id="fProjSel">
+          <span id="fProjSelTxt"></span>
+          <button onclick="clearFProjSel()">×</button>
+        </div>
+        <input type="hidden" id="fProjekt">
       </div>
       <div class="mf">
         <label>Osoba</label>
@@ -999,9 +1005,9 @@ nav {
         </select>
       </div>
       <div class="mf">
-        <label>Časť dokumentácie</label>
-        <select id="fCast">
-          <option value="as">AŠ – Štúdia</option>
+        <label>Stupeň dokumentácie</label>
+        <select id="fCast" onchange="onCastChange()">
+          <option value="as">AŠ – Architektonická štúdia</option>
           <option value="sz">SZ – Stavebný zámer</option>
           <option value="ps" selected>PS – Projekt stavby</option>
         </select>
@@ -1009,11 +1015,6 @@ nav {
       <div class="mf">
         <label>Typ fázy</label>
         <select id="fTyp">
-          <option value="asN">AŠ Návrh</option>
-          <option value="f1">F1 Príprava ASR</option>
-          <option value="f3">F3 Koordinácia</option>
-          <option value="f4">F4 Dopracovanie</option>
-          <option value="f5">F5 Inžiniering</option>
         </select>
       </div>
       <div class="mf">
@@ -2149,8 +2150,10 @@ const SVIATKY = [
 ];
 
 const FAZA_FARBY = {
-  asN: {bg:'#378ADD22', bc:'#378ADD66', tc:'#185FA5', lbl:'AŠ'},
+  asN: {bg:'#378ADD22', bc:'#378ADD66', tc:'#185FA5', lbl:'AŠ Návrh'},
+  asC: {bg:'var(--bg3)', bc:'var(--border)', tc:'var(--text3)', lbl:'AŠ Čakanie'},
   f1:  {bg:'#E24B4A22', bc:'#E24B4A66', tc:'#A32D2D', lbl:'F1'},
+  f2:  {bg:'var(--bg3)', bc:'var(--border)', tc:'var(--text3)', lbl:'F2'},
   f3:  {bg:'var(--ora-bg)', bc:'var(--ora-bd)', tc:'var(--orange)', lbl:'F3'},
   f4:  {bg:'#E24B4A22', bc:'#E24B4A66', tc:'#A32D2D', lbl:'F4'},
   f5:  {bg:'var(--border)', bc:'var(--border2)', tc:'var(--text3)', lbl:'F5'},
@@ -2179,19 +2182,41 @@ function formatDatum(iso) {
 }
 
 // ── MODAL PRIDAŤ/EDITOVAŤ FÁZU ────────────────────────────────────────────
+function onCastChange() {
+  const cast = document.getElementById('fCast').value;
+  const sel = document.getElementById('fTyp');
+  const prev = sel.value;
+  if (cast === 'as') {
+    sel.innerHTML = `
+      <option value="asN">AŠ Návrh</option>
+      <option value="asC">AŠ Čakanie na klienta</option>`;
+  } else {
+    sel.innerHTML = `
+      <option value="f1">F1 Príprava ASR</option>
+      <option value="f2">F2 Čakanie</option>
+      <option value="f3">F3 Koordinácia</option>
+      <option value="f4">F4 Dopracovanie</option>
+      <option value="f5">F5 Inžiniering</option>`;
+  }
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
 function openAddFazaModal(id) {
-  const sel = document.getElementById('fProjekt');
-  sel.innerHTML = '<option value="">Vybrať…</option>' +
-    projects.filter(p => p.faza !== 'Ukončený')
-      .map(p => `<option value="${p.cislo}">${p.cislo} – ${p.nazov}</option>`).join('');
+  // Reset search UI
+  document.getElementById('fProjQ').value = '';
+  document.getElementById('fProjDrop').classList.remove('show');
+  document.getElementById('fProjSel').classList.remove('show');
+  document.getElementById('fProjekt').value = '';
 
   if (id) {
     const f = fazy.find(x => x.id === id);
     if (!f) return;
+    const proj = projects.find(p => p.cislo === f.cislo);
     document.getElementById('fazaModalTitle').textContent = 'Upraviť fázu';
-    document.getElementById('fProjekt').value = f.cislo;
+    selectFProj(f.cislo, proj?.nazov || '');
     document.getElementById('fOsoba').value   = f.osoba;
     document.getElementById('fCast').value    = f.cast || 'ps';
+    onCastChange();
     document.getElementById('fTyp').value     = f.typ;
     document.getElementById('fOd').value      = f.od;
     document.getElementById('fDo').value      = f.do;
@@ -2200,9 +2225,9 @@ function openAddFazaModal(id) {
     document.getElementById('fazaModal')._editId = id;
   } else {
     document.getElementById('fazaModalTitle').textContent = 'Nová fáza';
-    document.getElementById('fProjekt').value = '';
     document.getElementById('fOsoba').value   = '';
     document.getElementById('fCast').value    = 'ps';
+    onCastChange();
     document.getElementById('fTyp').value     = 'f1';
     document.getElementById('fOd').value      = new Date().toISOString().split('T')[0];
     const zajtra = new Date(); zajtra.setDate(zajtra.getDate()+7);
@@ -2212,6 +2237,39 @@ function openAddFazaModal(id) {
     document.getElementById('fazaModal')._editId = null;
   }
   document.getElementById('fazaModal').classList.remove('hidden');
+}
+
+function onFProjQ() {
+  const q = document.getElementById('fProjQ').value.toLowerCase().trim();
+  const drop = document.getElementById('fProjDrop');
+  if (!q) { drop.classList.remove('show'); drop.innerHTML=''; return; }
+  const hits = projects.filter(p =>
+    p.faza !== 'Ukončený' &&
+    (p.cislo.toLowerCase().includes(q) || (p.nazov||'').toLowerCase().includes(q))
+  ).slice(0, 10);
+  if (!hits.length) { drop.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--text3);">Žiadne výsledky</div>'; drop.classList.add('show'); return; }
+  drop.innerHTML = hits.map(p =>
+    `<div class="proj-opt" onclick="selectFProj('${p.cislo}','${(p.nazov||'').replace(/'/g,'&#39;')}')">
+      <span style="font-weight:600;">${p.cislo}</span> <span style="color:var(--text3);">${p.nazov||''}</span>
+    </div>`
+  ).join('');
+  drop.classList.add('show');
+}
+
+function selectFProj(cislo, nazov) {
+  document.getElementById('fProjekt').value = cislo;
+  document.getElementById('fProjSelTxt').textContent = cislo + (nazov ? ' – ' + nazov : '');
+  document.getElementById('fProjSel').classList.add('show');
+  document.getElementById('fProjDrop').classList.remove('show');
+  document.getElementById('fProjQ').value = '';
+  document.getElementById('fProjQ').style.display = 'none';
+}
+
+function clearFProjSel() {
+  document.getElementById('fProjekt').value = '';
+  document.getElementById('fProjSel').classList.remove('show');
+  document.getElementById('fProjQ').style.display = '';
+  document.getElementById('fProjQ').focus();
 }
 
 function closeFazaModal() {

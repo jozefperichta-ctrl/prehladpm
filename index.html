@@ -1037,6 +1037,158 @@ nav {
   </div>
 </div>
 
+<!-- MODAL – PROJEKT (pridať/upraviť) -->
+<div class="overlay hidden" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Projekt</h3>
+    <div class="mfields">
+      <div class="mf"><label>Číslo projektu</label><input id="mCislo" placeholder="24-031"></div>
+      <div class="mf"><label>Lopta u koho</label>
+        <select id="mLopta">
+          <option value="">—</option>
+          <option>PM</option><option>Projektant</option>
+          <option>Architekt</option><option>Projektant+Profesista</option>
+          <option>Profesista</option><option>Klient</option>
+          <option>Inžiniering</option><option>Šéf</option><option>Tomáš</option>
+        </select>
+      </div>
+      <div class="mf full"><label>Názov projektu</label><input id="mNazov" placeholder="Bytový dom Nitra…"></div>
+      <div class="mf full"><label>Fáza</label>
+        <select id="mFaza">
+          <option value="">—</option>
+          <option>Štúdia</option>
+          <option>Stavebný zámer</option>
+          <option>Stavebný projekt</option>
+          <option>Stavebný a realizačný projekt</option>
+          <option>Realizačný projekt</option>
+          <option>Čakanie – inžiniering zámeru</option>
+          <option>Čakanie – inžiniering projektu</option>
+          <option>Projekčná podpora pri realizácii</option>
+          <option>Autorský dozor</option>
+          <option>Projektový servis</option>
+          <option>Projektový servis pre inžiniering</option>
+          <option>Pozastavený</option>
+          <option>Ukončený</option>
+        </select>
+      </div>
+      <div class="mf"><label>Projektant</label><input id="mProjectant" placeholder="Novák J."></div>
+      <div class="mf"><label>Od kedy čaká</label><input type="date" id="mOdKedy"></div>
+      <div class="mf"><label>Deadline</label><input type="date" id="mDeadline"></div>
+      <div class="mf"><label>Akcia</label>
+        <select id="mAkcia"><option value="NIE">NIE</option><option value="ÁNO">ÁNO</option></select>
+      </div>
+      <div class="mf full"><label>Popis akcie / Poznámka</label>
+        <textarea id="mPoznamka" placeholder="Čo treba urobiť…"></textarea>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btn-ghost" onclick="closeModal()">Zrušiť</button>
+      <button class="btn-primary" onclick="saveProject()">Uložiť</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL – NOVÁ ÚLOHA -->
+<div class="overlay hidden" id="ulohaModal">
+  <div class="modal">
+    <h3>Nová úloha</h3>
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <div id="typProfesia" class="sbtn active" onclick="switchUlohaTyp('profesia')"
+        style="flex:1;text-align:center;border-radius:8px;padding:8px;">Profesia</div>
+      <div id="typInterna" class="sbtn" onclick="switchUlohaTyp('interna')"
+        style="flex:1;text-align:center;border-radius:8px;padding:8px;">Interná úloha</div>
+    </div>
+    <div class="mfields">
+      <div class="mf full">
+        <label>Projekt</label>
+        <input id="uProjekt" type="text" readonly style="background:var(--bg3);color:var(--text2);">
+      </div>
+      <div class="mf full" id="uFieldProfesia">
+        <label>Profesia</label>
+        <select id="uProfesia">
+          <option value="">Vybrať…</option>
+          <option>Statika</option><option>PBS</option><option>ELI</option>
+          <option>ZTI</option><option>ÚK</option><option>VZT</option>
+          <option>Plyn</option><option>Doprava</option><option>Slaboprúd</option>
+          <option>VN</option><option>ASR</option><option>Iné</option>
+        </select>
+      </div>
+      <div class="mf full" id="uFieldDodavatel">
+        <label>Dodávateľ</label>
+        <input id="uDodavatel" type="text" placeholder="Hľadať dodávateľa…">
+      </div>
+      <div class="mf full" id="uFieldNazov" style="display:none;">
+        <label>Názov úlohy</label>
+        <input id="uNazov" type="text" placeholder="Čo treba urobiť…">
+      </div>
+      <div class="mf full" id="uFieldPrideleny" style="display:none;">
+        <label>Prideliť komu</label>
+        <select id="uPrideleny">
+          <option value="">Vybrať…</option>
+          <option>Jozef</option><option>Tomas</option><option>Mirka</option>
+          <option>Veronika</option><option>Erik</option><option>Lucia</option><option>Sona</option>
+        </select>
+      </div>
+      <div class="mf"><label>Termín</label><input id="uTermin" type="date"></div>
+      <div class="mf"><label>Priorita</label>
+        <select id="uPriorita">
+          <option value="2">Stredná</option>
+          <option value="3">Vysoká</option>
+          <option value="1">Nízka</option>
+        </select>
+      </div>
+      <div class="mf full"><label>Poznámka</label>
+        <textarea id="uPopis" placeholder="Poznámka k úlohe…"></textarea>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btn-ghost" onclick="closeUlohaModal()">Zrušiť</button>
+      <button class="btn-primary" onclick="vytvorUlohu()">Vytvoriť</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL – EDIT ÚLOHY -->
+<div class="overlay hidden" id="editUlohaModal">
+  <div class="modal">
+    <h3 id="euTitle">Úloha</h3>
+    <div class="mfields">
+      <div class="mf full">
+        <label>Profesia / Názov</label>
+        <input id="euProfesia" type="text">
+      </div>
+      <div class="mf full">
+        <label>Lopta u koho</label>
+        <select id="euLopta">
+          <option value="">—</option>
+          <option>PM</option><option>Šéf</option><option>Klient</option>
+          <option>Architekt</option><option>Projektant</option>
+          <option>Profesista</option><option>Inžiniering</option><option>Úrad</option>
+        </select>
+      </div>
+      <div class="mf full">
+        <label>Stav</label>
+        <select id="euStav">
+          <option value="v-rieseni">V riešení</option>
+          <option value="cakam">Čakám</option>
+          <option value="hotove">Hotové</option>
+        </select>
+      </div>
+      <div class="mf full">
+        <label>Dodávateľ / Pridelený</label>
+        <input id="euDodavatel" type="text">
+      </div>
+      <div class="mf full"><label>Termín</label><input id="euTermin" type="date"></div>
+      <div class="mf full"><label>Poznámka</label><textarea id="euPoznamka"></textarea></div>
+    </div>
+    <div class="mactions">
+      <button class="btn-ghost" style="color:var(--red);border-color:var(--red-bd);" onclick="deleteUloha()">Zmazať</button>
+      <button class="btn-ghost" onclick="closeEditUlohaModal()">Zrušiť</button>
+      <button class="btn-primary" onclick="saveEditUloha()">Uložiť</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- NAV -->

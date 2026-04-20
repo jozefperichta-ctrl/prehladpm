@@ -2204,7 +2204,8 @@ function onCastChange() {
 function openAddFazaModal(id) {
   // Reset search UI
   document.getElementById('fProjQ').value = '';
-  document.getElementById('fProjDrop').classList.remove('show');
+  document.getElementById('fProjQ').style.display = '';
+  document.getElementById('fProjDrop').style.display = 'none';
   document.getElementById('fProjSel').classList.remove('show');
   document.getElementById('fProjekt').value = '';
 
@@ -2240,27 +2241,31 @@ function openAddFazaModal(id) {
 }
 
 function onFProjQ() {
-  const q = document.getElementById('fProjQ').value.toLowerCase().trim();
-  const drop = document.getElementById('fProjDrop');
-  if (!q) { drop.classList.remove('show'); drop.innerHTML=''; return; }
+  const q  = document.getElementById('fProjQ').value.toLowerCase().trim();
+  const el = document.getElementById('fProjDrop');
+  if (!q) { el.style.display='none'; return; }
   const hits = projects.filter(p =>
     p.faza !== 'Ukončený' &&
     (p.cislo.toLowerCase().includes(q) || (p.nazov||'').toLowerCase().includes(q))
   ).slice(0, 10);
-  if (!hits.length) { drop.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--text3);">Žiadne výsledky</div>'; drop.classList.add('show'); return; }
-  drop.innerHTML = hits.map(p =>
-    `<div class="proj-opt" onclick="selectFProj('${p.cislo}','${(p.nazov||'').replace(/'/g,'&#39;')}')">
-      <span style="font-weight:600;">${p.cislo}</span> <span style="color:var(--text3);">${p.nazov||''}</span>
+  if (!hits.length) {
+    el.style.display='block';
+    el.innerHTML = '<div class="proj-dropdown-item" style="color:var(--text3);">Žiadne výsledky</div>';
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = hits.map(p =>
+    `<div class="proj-dropdown-item" onclick="selectFProj('${p.cislo}','${(p.nazov||'').replace(/'/g,'&#39;')}')">
+      <span style="color:var(--text3);margin-right:6px">${p.cislo}</span>${p.nazov||''}
     </div>`
   ).join('');
-  drop.classList.add('show');
 }
 
 function selectFProj(cislo, nazov) {
   document.getElementById('fProjekt').value = cislo;
   document.getElementById('fProjSelTxt').textContent = cislo + (nazov ? ' – ' + nazov : '');
   document.getElementById('fProjSel').classList.add('show');
-  document.getElementById('fProjDrop').classList.remove('show');
+  document.getElementById('fProjDrop').style.display = 'none';
   document.getElementById('fProjQ').value = '';
   document.getElementById('fProjQ').style.display = 'none';
 }

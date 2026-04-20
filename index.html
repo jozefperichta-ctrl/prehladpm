@@ -1564,11 +1564,16 @@ function prowHtml(p) {
         ${p.faza?`<span class="tag tag-faza">${p.faza}</span>`:''}
         ${!jeUMna(p.lopta)?`<span class="tag tag-lopta">@ ${p.lopta}</span>`:''}
         ${p.akcia==='ÁNO'&&p.opisAkcie?`<span class="tag tag-akcia">⚡ ${p.opisAkcie.slice(0,36)}${p.opisAkcie.length>36?'…':''}</span>`:''}
+        ${ul.length?`<span class="tag" style="background:var(--bg3);color:var(--text3);">${ul.length} úloh</span>`:''}
       </div>
     </div>
     <div class="prow-days ${dc}">${ds}</div>
+    <button onclick="editProjekt('${p.cislo}',event)" title="Upraviť projekt"
+      style="background:none;border:1px solid var(--border);border-radius:5px;
+      width:24px;height:24px;cursor:pointer;font-size:11px;color:var(--text3);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:4px;">✎</button>
   </div>
-  <div class="proj-ulohy" id="ulohy-${p.cislo}">
+  <div class="proj-ulohy" id="ulohy-${p.cislo}" style="display:none;">
     ${ulHtml}
     <div class="uloha-add-btn" onclick="openUlohaForm('${p.cislo}')">+</div>
   </div>
@@ -1675,13 +1680,15 @@ function cycleUlohaStav(cislo, id, e) {
 }
 
 function toggleProjDetail(cislo, e) {
-  if (window.innerWidth < 600) {
-    const el = document.getElementById('ulohy-' + cislo);
-    const row = e.currentTarget;
-    if (el) { el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
-  } else {
-    openEdit(cislo);
-  }
+  // Ak klik na tagy alebo v body projektu - toggle úlohy
+  // Dvojklik alebo klik na edit ikonu - otvor modal
+  const el = document.getElementById('ulohy-' + cislo);
+  if (el) { el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+}
+
+function editProjekt(cislo, e) {
+  if (e) e.stopPropagation();
+  openEdit(cislo);
 }
 
 function openUlohaForm(cislo) {

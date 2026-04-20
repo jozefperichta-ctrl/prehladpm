@@ -2418,6 +2418,32 @@ function renderKalendar() {
     // Neprítomnosti
     const mojeNeprit = neprit[c.id] || [];
 
+    // Výpočet pruhov (lanes) – každej fáze priraď číslo pruhu tak aby sa neprekrývali
+    const sorted = [...mojeFazy].sort((a,b) => a.od.localeCompare(b.od));
+    const lanes = []; // lanes[i] = [{od,do}, ...]
+    const fazaLane = {}; // id -> lane index
+    sorted.forEach(f => {
+      let placed = false;
+      for (let i = 0; i < lanes.length; i++) {
+        // Skontroluj či sa nová fáza neprekrýva s niektorou v tomto lane
+        const overlap = lanes[i].some(x => !(f.do < x.od || f.od > x.do));
+        if (!overlap) {
+          lanes[i].push({od: f.od, do: f.do});
+          fazaLane[f.id] = i;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        lanes.push([{od: f.od, do: f.do}]);
+        fazaLane[f.id] = lanes.length - 1;
+      }
+    });
+    const maxLane = Math.max(0, lanes.length - 1);
+    const barHeight = 22;
+    const laneGap = 4;
+    const rowHeight = (maxLane + 1) * (barHeight + laneGap) + laneGap;
+
     // Vytvor pozadie – cells per day
     const cells = dni.map((d, i) => {
       const iso = d.toISOString().split('T')[0];
@@ -2433,7 +2459,7 @@ function renderKalendar() {
         ${isToday?'box-shadow:inset 0 0 0 1px var(--red);':''}"></div>`;
     }).join('');
 
-    // Fázy ako absolútne bary
+    // Fázy ako absolútne bary (s pruhom)
     const bars = mojeFazy.map(f => {
       const farby = FAZA_FARBY[f.typ] || FAZA_FARBY.f1;
       const od = new Date(f.od); od.setHours(0,0,0,0);
@@ -2446,8 +2472,10 @@ function renderKalendar() {
       const proj = projects.find(p => p.cislo === f.cislo);
       const nazov = proj?.nazov || f.cislo;
       const castLbl = {as:'AŠ', sz:'SZ', ps:'PS'}[f.cast] || '';
+      const laneIdx = fazaLane[f.id] || 0;
+      const topPos = laneGap + laneIdx * (barHeight + laneGap);
       return `<div onclick="openAddFazaModal(${f.id})"
-        style="position:absolute;left:${left}px;width:${width-2}px;top:4px;height:22px;
+        style="position:absolute;left:${left}px;width:${width-2}px;top:${topPos}px;height:${barHeight}px;
         background:${farby.bg};border:1px solid ${farby.bc};border-radius:5px;
         color:${farby.tc};font-size:10px;font-weight:600;
         display:flex;align-items:center;padding:0 6px;cursor:pointer;overflow:hidden;
@@ -2465,7 +2493,7 @@ function renderKalendar() {
           <div style="font-size:10px;color:var(--text3);">${c.typ==='APS'?'arch.+proj.':'projektant'}</div>
         </div>
       </div>
-      <div style="position:relative;height:30px;flex:1;display:flex;min-width:${totalDays*dayWidth}px;">
+      <div style="position:relative;height:${rowHeight}px;flex:1;display:flex;min-width:${totalDays*dayWidth}px;">
         ${cells}
         ${bars}
       </div>

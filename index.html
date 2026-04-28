@@ -736,7 +736,8 @@ nav {
   <!-- Aktívne / Pozastavené toggle (skryté pre Archív) -->
   <div class="phase-bar" id="phaseBar">
     <div class="stav-tabs" id="stavTabs">
-      <button class="stab active" id="stabAkt" onclick="setStavFilter('aktivny')">Aktívne</button>
+      <button class="stab active" id="stabPrip" onclick="setStavFilter('pripravovany')">Pripravované</button>
+      <button class="stab" id="stabAkt" onclick="setStavFilter('aktivny')">Aktívne</button>
       <button class="stab" id="stabPoz" onclick="setStavFilter('pozastaveny')">Pozastavené</button>
     </div>
     <button class="hbtn" id="btnGemini" onclick="geminiZhrnVsetky()" title="Generovať Gemini zhrnutia">
@@ -1205,11 +1206,11 @@ let cfg       = JSON.parse(localStorage.getItem('pmCfg3')   || '{}');
 let maily     = [];
 let stavFilter = 'all';
 let activeStat = null;
-let stavMap   = JSON.parse(localStorage.getItem('pmStav')   || '{}');  // {cislo: 'aktivny'|'pozastaveny'}
+let stavMap   = JSON.parse(localStorage.getItem('pmStav')   || '{}');  // {cislo: 'pripravovany'|'aktivny'|'pozastaveny'}
 let dennikMap = JSON.parse(localStorage.getItem('pmDennik') || '{}');  // {cislo: [{datum, text}]}
 let geminiMap = JSON.parse(localStorage.getItem('pmGemini') || '{}');  // {cislo: 'text'}
 let activeFaza = 'Štúdia';
-let activeStav = 'aktivny';
+let activeStav = 'pripravovany';
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -1239,6 +1240,7 @@ function goTab(name) {
 
 function setStavFilter(s) {
   activeStav = s;
+  document.getElementById('stabPrip').classList.toggle('active', s === 'pripravovany');
   document.getElementById('stabAkt').classList.toggle('active', s === 'aktivny');
   document.getElementById('stabPoz').classList.toggle('active', s === 'pozastaveny');
   renderProjects();
@@ -1456,7 +1458,7 @@ function renderProjects() {
   }
   list = projects.filter(p => {
     if (p.faza !== activeFaza) return false;
-    return (stavMap[p.cislo] || 'aktivny') === activeStav;
+    return (stavMap[p.cislo] || 'pripravovany') === activeStav;
   });
   if (!list.length) {
     el.innerHTML = emptyHtml('Žiadne projekty');
@@ -1538,7 +1540,8 @@ function buildDetailHtml(p) {
     </select>
     ${p.faza!=='Archív'?`
     <select class="pd-sel" onchange="saveProjStav('${p.cislo}',this.value)">
-      <option value="aktivny"${(stavMap[p.cislo]||'aktivny')==='aktivny'?' selected':''}>Aktívny</option>
+      <option value="pripravovany"${(stavMap[p.cislo]||'pripravovany')==='pripravovany'?' selected':''}>Pripravovaný</option>
+      <option value="aktivny"${(stavMap[p.cislo]||'')==='aktivny'?' selected':''}>Aktívny</option>
       <option value="pozastaveny"${(stavMap[p.cislo]||'')==='pozastaveny'?' selected':''}>Pozastavený</option>
     </select>`:''}
   </div>
@@ -1954,7 +1957,7 @@ async function saveToSheets(proj, isNew) {
 // ── GEMINI – ZHRNUTIA PRE VŠETKY PROJEKTY ─────────────────────────────────
 async function geminiZhrnVsetky() {
   if (!cfg.url) { showToast('Nastav Apps Script URL','err'); return; }
-  const list = projects.filter(p => p.faza === activeFaza && (stavMap[p.cislo]||'aktivny') === activeStav);
+  const list = projects.filter(p => p.faza === activeFaza && (stavMap[p.cislo]||'pripravovany') === activeStav);
   if (!list.length) { showToast('Žiadne projekty na zhrnutie','err'); return; }
   const btn = document.getElementById('btnGemini');
   btn.disabled = true;

@@ -1702,7 +1702,7 @@ function saveEditUloha() {
   u.popis     = document.getElementById('euPoznamka').value.trim();
   localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
   closeEditUlohaModal();
-  renderAll();
+  refreshUlohy(cislo);
   showToast('Úloha uložená ✓','ok');
 }
 
@@ -1714,7 +1714,7 @@ function deleteUloha() {
   ulohy[cislo] = ulohy[cislo].filter(x => x.id !== id);
   localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
   closeEditUlohaModal();
-  renderAll();
+  refreshUlohy(cislo);
   showToast('Úloha zmazaná','ok');
 }
 
@@ -1750,7 +1750,7 @@ function pridajPoznamku(cislo, id) {
   inp.value = '';
   localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
   document.getElementById('pi-' + id).style.display = 'none';
-  renderAll();
+  refreshUlohy(cislo);
 }
 
 function cycleUlohaStav(cislo, id, e) {
@@ -1763,7 +1763,14 @@ function cycleUlohaStav(cislo, id, e) {
   const idx = stavy.indexOf(u.stav);
   u.stav = stavy[(idx + 1) % stavy.length];
   localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
-  renderAll();
+  refreshUlohy(cislo);
+}
+
+function refreshUlohy(cislo) {
+  const el = document.getElementById('pd-ulohy-' + cislo);
+  if (!el) return;
+  const p = projects.find(x => x.cislo === cislo);
+  if (p) el.innerHTML = buildUlohyHtml(p);
 }
 
 function toggleProjDetail(cislo, e) {
@@ -2294,9 +2301,8 @@ async function vytvorUlohu() {
   localStorage.setItem('pmUlohy', JSON.stringify(ulohy));
 
   closeUlohaModal();
-  renderAll();
+  refreshUlohy(cislo);
   showToast('Úloha pridaná ✓','ok');
-  // TODO: Caflou API vytvorenie úlohy
 }
 
 // ── PLÁNOVANIE (manuálne) ─────────────────────────────────────────────────

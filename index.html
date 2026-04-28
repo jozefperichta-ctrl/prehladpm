@@ -609,6 +609,85 @@ nav {
 .fade { animation: fadeUp .25s ease both; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin .8s linear infinite; }
+
+/* ── PHASE BAR ── */
+.phase-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.stav-tabs { display: flex; gap: 4px; }
+.stab {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 7px; padding: 5px 12px;
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  color: var(--text2); cursor: pointer;
+}
+.stab.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+/* ── PROJECT ROW NEW ── */
+.prow-wrap { position: relative; }
+.prow-podfaza { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+.prow-gemini { font-size: 11px; color: var(--text2); margin-top: 3px; font-style: italic; }
+
+/* ── PROJEKT DETAIL (inline) ── */
+.proj-detail {
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+  padding: 14px 16px; display: none;
+}
+.proj-detail.open { display: block; }
+.pd-section { margin-bottom: 14px; }
+.pd-section:last-child { margin-bottom: 0; }
+.pd-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--text3); margin-bottom: 6px;
+}
+.pd-selects { display: flex; gap: 6px; flex-wrap: wrap; }
+.pd-sel {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 6px 10px;
+  font-family: var(--sans); font-size: 12px; color: var(--text);
+  cursor: pointer; outline: none;
+}
+.pd-sel:focus { border-color: var(--blue); }
+.dennik-list { margin-bottom: 8px; }
+.dennik-entry {
+  display: flex; gap: 8px; padding: 6px 0;
+  border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.dennik-entry:last-child { border-bottom: none; }
+.dennik-datum { color: var(--text3); flex-shrink: 0; min-width: 90px; font-size: 11px; padding-top: 1px; }
+.dennik-text { color: var(--text2); flex: 1; }
+.dennik-add { display: flex; gap: 6px; margin-top: 6px; }
+.dennik-input {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 10px;
+  font-family: var(--sans); font-size: 12px; color: var(--text); outline: none;
+}
+.dennik-input:focus { border-color: var(--blue); }
+.btn-add-zaz {
+  background: var(--text); color: #fff; border: none;
+  border-radius: 7px; padding: 7px 14px;
+  font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── FAZA GROUP ── */
+.faza-group { margin-bottom: 4px; }
+.faza-group-head {
+  padding: 6px 16px 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--text3);
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+}
+
+/* ── ARCHIV ROW ── */
+.archiv-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.archiv-row:hover { background: var(--bg3); }
 </style>
 </head>
 <body>
@@ -650,103 +729,30 @@ nav {
 </div>
 
 <!-- ════════════════════════════════════════
-     SEKCIA 1 – PREHĽAD
+     SEKCIA 1 – PROJEKTY (Štúdia/Projekcia/Inžiniering/Archív)
 ════════════════════════════════════════ -->
 <div class="sec active" id="secPrehled">
 
-  <!-- Štatistiky – dve skupiny -->
-  <div style="padding: 12px 16px 0;">
-
-    <!-- Skupina 1: Urgentnosť -->
-    <div style="margin-bottom: 8px;">
-      <div style="font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; padding-left: 2px;">Urgentnosť</div>
-      <div style="display: grid; grid-template-columns: repeat(3,1fr); gap: 7px;">
-        <div class="stat s-red" id="stHori" onclick="toggleStat(&#39;hori&#39;)">
-          <div class="stat-val" id="vHori">3</div>
-          <div class="stat-lbl">Horí dnes</div>
-        </div>
-        <div class="stat s-orange" id="stCakam" onclick="toggleStat(&#39;cakam&#39;)">
-          <div class="stat-val" id="vCakam">3</div>
-          <div class="stat-lbl">Čakám na odpoveď</div>
-        </div>
-        <div class="stat s-blue" id="stDeadline" onclick="toggleStat(&#39;deadline&#39;)">
-          <div class="stat-val" id="vDeadline">3</div>
-          <div class="stat-lbl">Deadline tento týždeň</div>
-        </div>
-      </div>
+  <!-- Aktívne / Pozastavené toggle (skryté pre Archív) -->
+  <div class="phase-bar" id="phaseBar">
+    <div class="stav-tabs" id="stavTabs">
+      <button class="stab active" id="stabAkt" onclick="setStavFilter('aktivny')">Aktívne</button>
+      <button class="stab" id="stabPoz" onclick="setStavFilter('pozastaveny')">Pozastavené</button>
     </div>
-
-    <!-- Skupina 2: Aktivita -->
-    <div>
-      <div style="font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; padding-left: 2px;">Aktivita</div>
-      <div style="display: grid; grid-template-columns: repeat(2,1fr); gap: 7px;">
-        <div class="stat" id="stAktivne" onclick="toggleStat(&#39;aktivne&#39;)">
-          <div class="stat-val" id="vAktivne">4</div>
-          <div class="stat-lbl">Aktívne projekty</div>
-        </div>
-        <div class="stat" id="stPozastavene" onclick="toggleStat(&#39;pozastavene&#39;)">
-          <div class="stat-val" id="vPozastavene">0</div>
-          <div class="stat-lbl">Pozastavené</div>
-        </div>
-      </div>
-    </div>
-
+    <button class="hbtn" id="btnGemini" onclick="geminiZhrnVsetky()" title="Generovať Gemini zhrnutia">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+      </svg>
+      <span class="hbtn-lbl">Zhrň</span>
+    </button>
   </div>
 
-  <!-- Vyhľadávanie + filtre -->
-  <div class="search-bar">
-    <div class="search-row-inputs">
-      <div class="search-input-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input id="searchQ" type="text" placeholder="Hľadať projekt…" oninput="doSearch()">
-      </div>
-      <select class="filter-sel" id="searchFaza" onchange="doSearch()">
-        <option value="">Všetky fázy</option>
-        <option>Štúdia</option>
-        <option>Stavebný zámer</option>
-        <option>Stavebný projekt</option>
-        <option>Stavebný a realizačný projekt</option>
-        <option>Realizačný projekt</option>
-        <option>Čakanie – inžiniering zámeru</option>
-        <option>Čakanie – inžiniering projektu</option>
-        <option>Projekčná podpora pri realizácii</option>
-        <option>Autorský dozor</option>
-        <option>Projektový servis</option>
-        <option>Projektový servis pre inžiniering</option>
-        <option>Územný development</option>
-        <option>Uzemnoplánovacia dokumentácia</option>
-        <option>Nezaradené</option>
-        <option>Pozastavený</option>
-      </select>
-      <select class="filter-sel" id="searchLopta" onchange="doSearch()">
-        <option value="">Lopta u koho</option>
-        <option>PM</option><option>Projektant</option>
-        <option>Architekt</option><option>Projektant+Profesista</option>
-        <option>Profesista</option><option>Klient</option>
-        <option>Inžiniering</option><option>Šéf</option><option>Tomáš</option>
-      </select>
+  <!-- Zoznam projektov -->
+  <div id="listProjects">
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Načítavam…
     </div>
-    <div class="search-results" id="searchResults" style="display:none"></div>
-  </div>
-
-  <!-- Detail panel pri kliknutí na štatistiku -->
-  <div class="stat-detail hidden" id="statDetail">
-    <div class="sd-head">
-      <span id="sdTitle"></span>
-      <button class="sd-close" onclick="closeStat()">×</button>
-    </div>
-    <div id="sdList"></div>
-  </div>
-
-  <!-- Akcie z mailov -->
-  <div class="mail-akcie hidden" id="mailAkcie">
-    <div class="mail-akcie-head">
-      <span>📬 Akcie z mailov</span>
-      <span class="badge" id="mailAkcieCount">0</span>
-    </div>
-    <div id="mailAkcieList"></div>
   </div>
 
 </div>
@@ -868,22 +874,7 @@ nav {
 <!-- ════════════════════════════════════════
      SEKCIA 3 – ARCHÍV
 ════════════════════════════════════════ -->
-<div class="sec" id="secArchiv">
-  <div class="sec-wrap">
-    <div class="archiv-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-      <input type="text" id="archivQ" placeholder="Hľadať ukončený projekt…" oninput="renderArchiv()">
-    </div>
-    <div id="listArchiv">
-      <div class="empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect></svg>
-        Žiadne ukončené projekty
-      </div>
-    </div>
-  </div>
-</div>
+<div class="sec" id="secArchiv" style="display:none;"></div>
 
 <!-- ════════════════════════════════════════
      SEKCIA 4 – PLÁNOVANIE
@@ -1044,43 +1035,9 @@ nav {
     <h3 id="modalTitle">Projekt</h3>
     <div class="mfields">
       <div class="mf"><label>Číslo projektu</label><input id="mCislo" placeholder="24-031"></div>
-      <div class="mf"><label>Lopta u koho</label>
-        <select id="mLopta">
-          <option value="">—</option>
-          <option>PM</option><option>Projektant</option>
-          <option>Architekt</option><option>Projektant+Profesista</option>
-          <option>Profesista</option><option>Klient</option>
-          <option>Inžiniering</option><option>Šéf</option><option>Tomáš</option>
-        </select>
-      </div>
       <div class="mf full"><label>Názov projektu</label><input id="mNazov" placeholder="Bytový dom Nitra…"></div>
-      <div class="mf full"><label>Fáza</label>
-        <select id="mFaza">
-          <option value="">—</option>
-          <option>Štúdia</option>
-          <option>Stavebný zámer</option>
-          <option>Stavebný projekt</option>
-          <option>Stavebný a realizačný projekt</option>
-          <option>Realizačný projekt</option>
-          <option>Čakanie – inžiniering zámeru</option>
-          <option>Čakanie – inžiniering projektu</option>
-          <option>Projekčná podpora pri realizácii</option>
-          <option>Autorský dozor</option>
-          <option>Projektový servis</option>
-          <option>Projektový servis pre inžiniering</option>
-          <option>Pozastavený</option>
-          <option>Ukončený</option>
-        </select>
-      </div>
       <div class="mf"><label>Projektant</label><input id="mProjectant" placeholder="Novák J."></div>
-      <div class="mf"><label>Od kedy čaká</label><input type="date" id="mOdKedy"></div>
       <div class="mf"><label>Deadline</label><input type="date" id="mDeadline"></div>
-      <div class="mf"><label>Akcia</label>
-        <select id="mAkcia"><option value="NIE">NIE</option><option value="ÁNO">ÁNO</option></select>
-      </div>
-      <div class="mf full"><label>Popis akcie / Poznámka</label>
-        <textarea id="mPoznamka" placeholder="Čo treba urobiť…"></textarea>
-      </div>
     </div>
     <div class="mactions">
       <button class="btn-ghost" onclick="closeModal()">Zrušiť</button>
@@ -1205,18 +1162,26 @@ nav {
 
 <!-- NAV -->
 <nav>
-  <div class="ntab active" id="ntPrehled" onclick="goTab(&#39;Prehled&#39;)">
+  <div class="ntab active" id="ntStudia" onclick="goTab(&#39;Studia&#39;)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
-      <rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect>
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
     </svg>
-    Prehľad
+    Štúdia
   </div>
-  <div class="ntab" id="ntPonuky" onclick="goTab(&#39;Ponuky&#39;)">
+  <div class="ntab" id="ntProjekcia" onclick="goTab(&#39;Projekcia&#39;)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>
+      <line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line>
+      <line x1="6" y1="20" x2="6" y2="14"></line>
     </svg>
-    Ponuky
+    Projekcia
+  </div>
+  <div class="ntab" id="ntInziniering" onclick="goTab(&#39;Inziniering&#39;)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"></path>
+    </svg>
+    Inžiniering
   </div>
   <div class="ntab" id="ntArchiv" onclick="goTab(&#39;Archiv&#39;)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -1224,15 +1189,6 @@ nav {
       <line x1="10" y1="12" x2="14" y2="12"></line>
     </svg>
     Archív
-  </div>
-  <div class="ntab" id="ntPlan" onclick="goTab(&#39;Plan&#39;)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line>
-      <line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
-      <line x1="8" y1="14" x2="8" y2="14"></line><line x1="12" y1="14" x2="12" y2="14"></line>
-      <line x1="16" y1="14" x2="16" y2="14"></line>
-    </svg>
-    Plán
   </div>
 </nav>
 
@@ -1244,11 +1200,16 @@ let budgets   = JSON.parse(localStorage.getItem('pmBudgets') || '{}');
 let ulohy     = JSON.parse(localStorage.getItem('pmUlohy') || '{}');
 let plany     = JSON.parse(localStorage.getItem('pmPlany') || '{}');
 let fronty    = JSON.parse(localStorage.getItem('pmFronty') || '{}');
-let neprit    = JSON.parse(localStorage.getItem('pmNeprit') || '{}');  // dovolenky/PN per osoba
+let neprit    = JSON.parse(localStorage.getItem('pmNeprit') || '{}');
 let cfg       = JSON.parse(localStorage.getItem('pmCfg3')   || '{}');
 let maily     = [];
 let stavFilter = 'all';
 let activeStat = null;
+let stavMap   = JSON.parse(localStorage.getItem('pmStav')   || '{}');  // {cislo: 'aktivny'|'pozastaveny'}
+let dennikMap = JSON.parse(localStorage.getItem('pmDennik') || '{}');  // {cislo: [{datum, text}]}
+let geminiMap = JSON.parse(localStorage.getItem('pmGemini') || '{}');  // {cislo: 'text'}
+let activeFaza = 'Štúdia';
+let activeStav = 'aktivny';
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -1261,13 +1222,26 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── TABS ──────────────────────────────────────────────────────────────────
+const FAZA_MAP = { Studia:'Štúdia', Projekcia:'Projekcia', Inziniering:'Inžiniering', Archiv:'Archív' };
+
 function goTab(name) {
-  ['Prehled','Ponuky','Archiv','Plan'].forEach(n => {
-    document.getElementById('sec'+n).classList.toggle('active', n === name);
+  activeFaza = FAZA_MAP[name] || 'Štúdia';
+  ['Studia','Projekcia','Inziniering','Archiv'].forEach(n => {
     document.getElementById('nt'+n).classList.toggle('active', n === name);
   });
-  if (name === 'Archiv') renderArchiv();
-  if (name === 'Plan') renderPlan();
+  // Prehled section is always active (used for all 4 tabs)
+  document.getElementById('secPrehled').classList.add('active');
+  // Show/hide stav toggle
+  document.getElementById('stavTabs').style.display = (name === 'Archiv') ? 'none' : 'flex';
+  document.getElementById('btnGemini').style.display = (name === 'Archiv') ? 'none' : 'flex';
+  renderProjects();
+}
+
+function setStavFilter(s) {
+  activeStav = s;
+  document.getElementById('stabAkt').classList.toggle('active', s === 'aktivny');
+  document.getElementById('stabPoz').classList.toggle('active', s === 'pozastaveny');
+  renderProjects();
 }
 
 // ── CONFIG ─────────────────────────────────────────────────────────────────
@@ -1304,8 +1278,6 @@ async function syncData() {
     if (!d3.error) maily = parseMailyRows(d3.values || []);
 
     renderAll();
-    renderPonuky();
-    renderMaily();
     showToast(projects.length + ' projektov', 'ok');
   } catch(e) {
     showToast('Chyba: ' + e.message, 'err');
@@ -1338,6 +1310,7 @@ function parseMailyRows(rows) {
 function renderMaily() {
   const akcie = maily.filter(m => m.akcia === 'ÁNO');
   const el    = document.getElementById('mailAkcie');
+  if (!el) return;
   const list  = document.getElementById('mailAkcieList');
   const count = document.getElementById('mailAkcieCount');
 
@@ -1383,25 +1356,54 @@ function parsePonukyRows(rows) {
   }));
 }
 
+const OLD_FAZA_MAP = {
+  'Štúdia':                          { faza:'Štúdia',      podfaza:'', podpodfaza:'' },
+  'Stavebný zámer':                  { faza:'Projekcia',   podfaza:'Stavebný zámer', podpodfaza:'' },
+  'Stavebný projekt':                { faza:'Projekcia',   podfaza:'Projekt stavby', podpodfaza:'' },
+  'Realizačný projekt':              { faza:'Projekcia',   podfaza:'Projekt stavby', podpodfaza:'' },
+  'Stavebný a realizačný projekt':   { faza:'Projekcia',   podfaza:'Projekt stavby', podpodfaza:'' },
+  'Projektový servis pre inžiniering':{ faza:'Inžiniering', podfaza:'', podpodfaza:'' },
+  'Projektový servis':               { faza:'Inžiniering', podfaza:'', podpodfaza:'' },
+  'Čakanie – inžiniering zámeru':    { faza:'Inžiniering', podfaza:'', podpodfaza:'' },
+  'Čakanie – inžiniering projektu':  { faza:'Inžiniering', podfaza:'', podpodfaza:'' },
+  'Autorský dozor':                  { faza:'Inžiniering', podfaza:'', podpodfaza:'' },
+  'Ukončený':                        { faza:'Archív',      podfaza:'', podpodfaza:'' },
+  'Ukončená':                        { faza:'Archív',      podfaza:'', podpodfaza:'' },
+};
+const NEW_FAZAS = new Set(['Štúdia','Projekcia','Inžiniering','Archív']);
+
 function parseRows(rows) {
   if (rows.length < 2) return [];
   const t = new Date(); t.setHours(0,0,0,0);
-  return rows.slice(2).filter(r => r[0] && String(r[0]).trim()).map(r => {
-    const ok = parseDate(r[5]);
+  const result = rows.slice(2).filter(r => r[0] && String(r[0]).trim()).map(r => {
+    const raw = String(r[2]||'').trim();
     const dl = parseDate(r[6]);
+    let faza, podfaza, podpodfaza;
+    if (NEW_FAZAS.has(raw)) {
+      // Already new format
+      faza = raw;
+      podfaza    = String(r[7]||'').trim();
+      podpodfaza = String(r[8]||'').trim();
+    } else if (raw === 'Pozastavený') {
+      faza = 'Štúdia'; podfaza = ''; podpodfaza = '';
+      const cislo = String(r[0]||'').trim();
+      if (!stavMap[cislo]) { stavMap[cislo] = 'pozastaveny'; }
+    } else {
+      const mapped = OLD_FAZA_MAP[raw] || { faza:'Štúdia', podfaza:'', podpodfaza:'' };
+      faza = mapped.faza; podfaza = mapped.podfaza; podpodfaza = mapped.podpodfaza;
+    }
     return {
-      cislo:     String(r[0]||'').trim(),
-      nazov:     String(r[1]||'').trim(),
-      faza:      String(r[2]||'').trim(),
-      projektant:String(r[3]||'').trim(),
-      lopta:     String(r[4]||'').trim(),
-      odKedy: ok, dniCaka: ok ? Math.floor((t-ok)/86400000) : null,
+      cislo:      String(r[0]||'').trim(),
+      nazov:      String(r[1]||'').trim(),
+      faza, podfaza, podpodfaza,
+      projektant: String(r[3]||'').trim(),
+      lopta:      String(r[4]||'').trim(),
       deadline: dl, dniDead: dl ? Math.floor((dl-t)/86400000) : null,
-      akcia:     String(r[9]||'NIE').trim(),
-      opisAkcie: String(r[10]||'').trim(),
-      poznamka:  String(r[11]||'').trim(),
+      opisAkcie:  String(r[10]||'').trim(),
     };
   });
+  localStorage.setItem('pmStav', JSON.stringify(stavMap));
+  return result;
 }
 
 function parseDate(v) {
@@ -1420,103 +1422,199 @@ function loadDemo() {
   const t = new Date(); t.setHours(0,0,0,0);
   const d = n => { const x=new Date(t); x.setDate(x.getDate()+n); return x; };
   projects = [
-    {cislo:'24-001',nazov:'Bytový dom Nitra',faza:'Stavebný projekt',projektant:'Novák',lopta:'Profesista',odKedy:d(-9),dniCaka:9,deadline:d(5),dniDead:5,akcia:'ÁNO',opisAkcie:'Čakám na statický posudok',poznamka:''},
-    {cislo:'24-002',nazov:'RD Trenčín – Kubíčková',faza:'Čakanie – inžiniering zámeru',projektant:'Horváth',lopta:'Inžiniering',odKedy:d(-22),dniCaka:22,deadline:d(28),dniDead:28,akcia:'NIE',opisAkcie:'',poznamka:''},
-    {cislo:'24-003',nazov:'SSD Bratislava – Lamač',faza:'Stavebný zámer',projektant:'Novák',lopta:'PM',odKedy:d(0),dniCaka:0,deadline:d(3),dniDead:3,akcia:'ÁNO',opisAkcie:'Dokončiť bilančné výpočty',poznamka:''},
-    {cislo:'24-004',nazov:'Interiér Trnava',faza:'Štúdia',projektant:'Horváth',lopta:'Klient',odKedy:d(-4),dniCaka:4,deadline:d(2),dniDead:2,akcia:'ÁNO',opisAkcie:'Odsúhlasenie štúdie',poznamka:''},
-    {cislo:'23-001',nazov:'Školka Viničné',faza:'Ukončený',projektant:'Erik',lopta:'',odKedy:null,dniCaka:null,deadline:null,dniDead:null,akcia:'NIE',opisAkcie:'',poznamka:''},
-    {cislo:'23-002',nazov:'BD Sv Anton',faza:'Ukončený',projektant:'',lopta:'',odKedy:null,dniCaka:null,deadline:null,dniDead:null,akcia:'NIE',opisAkcie:'',poznamka:''},
+    {cislo:'24-001',nazov:'Bytový dom Nitra',faza:'Projekcia',podfaza:'Projekt stavby',podpodfaza:'Koordinácia s profesiami',projektant:'Novák',lopta:'Klient',deadline:d(5),dniDead:5},
+    {cislo:'24-002',nazov:'RD Trenčín – Kubíčková',faza:'Inžiniering',podfaza:'',podpodfaza:'',projektant:'Horváth',lopta:'',deadline:d(28),dniDead:28},
+    {cislo:'24-003',nazov:'SSD Bratislava – Lamač',faza:'Projekcia',podfaza:'Stavebný zámer',podpodfaza:'Dopracovanie dokumentácie',projektant:'Novák',lopta:'PM',deadline:d(3),dniDead:3},
+    {cislo:'24-004',nazov:'Interiér Trnava',faza:'Štúdia',podfaza:'',podpodfaza:'',projektant:'Horváth',lopta:'Klient',deadline:d(2),dniDead:2},
+    {cislo:'23-001',nazov:'Školka Viničné',faza:'Archív',podfaza:'',podpodfaza:'',projektant:'Erik',lopta:'',deadline:null,dniDead:null},
+    {cislo:'23-002',nazov:'BD Sv Anton',faza:'Archív',podfaza:'',podpodfaza:'',projektant:'',lopta:'',deadline:null,dniDead:null},
   ];
   renderAll();
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────
-function renderAll() {
-  const active = projects.filter(p => p.faza !== 'Ukončený' && p.faza !== 'Pozastavený');
-  const hori   = active.filter(isHori);
-  const cakam  = active.filter(p => p.lopta && !jeUMna(p.lopta));
-  const deadl  = active.filter(p => p.dniDead != null && p.dniDead <= 7).sort((a,b)=>a.dniDead-b.dniDead);
-  const pozast = projects.filter(p => p.faza === 'Pozastavený');
+function renderAll() { renderProjects(); }
 
-  document.getElementById('vHori').textContent        = hori.length;
-  document.getElementById('vCakam').textContent       = cakam.length;
-  document.getElementById('vDeadline').textContent    = deadl.length;
-  document.getElementById('vAktivne').textContent     = active.length;
-  document.getElementById('vPozastavene').textContent = pozast.length;
-
-  if (activeStat) toggleStat(activeStat, true);
-}
-
-function isHori(p) {
-  if (p.faza === 'Pozastavený' || p.faza === 'Ukončený') return false;
-  if (p.akcia === 'ÁNO' && jeUMna(p.lopta)) return true;
-  if (p.dniDead != null && p.dniDead <= 3)   return true;
-  if (p.dniCaka != null && p.dniCaka > 14)   return true;
-  return false;
-}
-
-// ── STAT DETAIL ───────────────────────────────────────────────────────────
-function toggleStat(type, forceOpen) {
-  if (activeStat === type && !forceOpen) { closeStat(); return; }
-  activeStat = type;
-  ['stHori','stCakam','stDeadline','stAktivne','stPozastavene'].forEach(id =>
-    document.getElementById(id).classList.remove('active'));
-  const map = {hori:'stHori',cakam:'stCakam',deadline:'stDeadline',aktivne:'stAktivne',pozastavene:'stPozastavene'};
-  document.getElementById(map[type]).classList.add('active');
-
-  const active = projects.filter(p => p.faza !== 'Ukončený' && p.faza !== 'Pozastavený');
-  let list, title;
-  if (type==='hori')         { list=active.filter(isHori); title='🔥 Horí dnes'; }
-  else if (type==='cakam')   { list=active.filter(p=>p.lopta&&!jeUMna(p.lopta)); title='⏳ Čakám na odpoveď'; }
-  else if (type==='deadline'){ list=active.filter(p=>p.dniDead!=null&&p.dniDead<=7).sort((a,b)=>a.dniDead-b.dniDead); title='📅 Deadline tento týždeň'; }
-  else if (type==='aktivne') { list=active; title='📋 Aktívne projekty'; }
-  else                       { list=projects.filter(p=>p.faza==='Pozastavený'); title='⏸️ Pozastavené'; }
-
-  document.getElementById('sdTitle').textContent = title + ' (' + list.length + ')';
-  document.getElementById('sdList').innerHTML = list.length
-    ? list.map(prowHtml).join('')
-    : '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Žiadne projekty</div>';
-  document.getElementById('statDetail').classList.remove('hidden');
-}
-
-function closeStat() {
-  activeStat = null;
-  document.getElementById('statDetail').classList.add('hidden');
-  ['stHori','stCakam','stDeadline','stAktivne','stPozastavene'].forEach(id =>
-    document.getElementById(id).classList.remove('active'));
-}
-
-// ── SEARCH ────────────────────────────────────────────────────────────────
-function doSearch() {
-  const q     = document.getElementById('searchQ').value.toLowerCase().trim();
-  const faza  = document.getElementById('searchFaza').value;
-  const lopta = document.getElementById('searchLopta').value;
-  const el    = document.getElementById('searchResults');
-
-  if (!q && !faza && !lopta) { el.style.display='none'; return; }
-
-  const res = projects.filter(p => {
-    if (p.faza === 'Ukončený') return false;
-    const mq = !q || p.cislo.toLowerCase().includes(q) || p.nazov.toLowerCase().includes(q) || (p.projektant||'').toLowerCase().includes(q) || (p.opisAkcie||'').toLowerCase().includes(q);
-    return mq && (!faza||p.faza===faza) && (!lopta||p.lopta===lopta);
+function renderProjects() {
+  const el = document.getElementById('listProjects');
+  let list;
+  if (activeFaza === 'Archív') {
+    list = projects.filter(p => p.faza === 'Archív');
+    el.innerHTML = list.length
+      ? list.map(p => `
+        <div class="archiv-row" onclick="toggleProjDetail('${p.cislo}',event)">
+          <div class="prow-num">${p.cislo}</div>
+          <div class="prow-body">
+            <div class="prow-name">${p.nazov}</div>
+            ${p.projektant?`<div class="prow-podfaza">${p.projektant}</div>`:''}
+          </div>
+          <div style="font-size:16px;color:var(--text3)">✓</div>
+        </div>
+        <div class="proj-detail" id="detail-${p.cislo}">${buildDetailHtml(p)}</div>`).join('')
+      : emptyHtml('Žiadne archivované projekty');
+    return;
+  }
+  list = projects.filter(p => {
+    if (p.faza !== activeFaza) return false;
+    return (stavMap[p.cislo] || 'aktivny') === activeStav;
   });
-  el.style.display = 'block';
-  el.innerHTML = res.length
-    ? res.map(prowHtml).join('')
-    : '<div style="padding:12px;text-align:center;font-size:12px;color:var(--text3)">Žiadne výsledky</div>';
+  if (!list.length) {
+    el.innerHTML = emptyHtml('Žiadne projekty');
+    return;
+  }
+  if (activeFaza === 'Projekcia') {
+    const groups = {};
+    const ORDER = ['Stavebný zámer','Projekt stavby',''];
+    list.forEach(p => { const k = p.podfaza||''; if (!groups[k]) groups[k]=[];  groups[k].push(p); });
+    el.innerHTML = ORDER.filter(k => groups[k]).map(k => `
+      <div class="faza-group">
+        ${k ? `<div class="faza-group-head">${k}</div>` : ''}
+        ${groups[k].map(p => projRowHtml(p)).join('')}
+      </div>`).join('');
+  } else {
+    el.innerHTML = list.map(p => projRowHtml(p)).join('');
+  }
 }
 
-// ── PROJECT ROW HTML ───────────────────────────────────────────────────────
-// "lopta u mňa" = PM alebo prázdne
-function jeUMna(lopta) {
-  return !lopta || lopta === 'PM';
+function emptyHtml(msg) {
+  return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>${msg}</div>`;
 }
 
-function prowHtml(p) {
-  const dc = p.dniDead!=null&&p.dniDead<=0?'red':p.dniDead!=null&&p.dniDead<=3?'orange':'muted';
-  const ds = p.dniDead!=null?(p.dniDead<=0?'Dnes!':p.dniDead+'d'):(p.dniCaka!=null&&p.dniCaka>7?p.dniCaka+'d←':'');
+function projRowHtml(p) {
+  const gem = geminiMap[p.cislo] || '';
+  return `<div class="prow-wrap">
+    <div class="prow" onclick="toggleProjDetail('${p.cislo}',event)">
+      <div class="prow-num">${p.cislo}</div>
+      <div class="prow-body">
+        <div class="prow-name">${p.nazov}</div>
+        ${p.podpodfaza ? `<div class="prow-podfaza">${p.podfaza} › ${p.podpodfaza}</div>`
+          : p.podfaza  ? `<div class="prow-podfaza">${p.podfaza}</div>` : ''}
+        ${gem ? `<div class="prow-gemini">${gem}</div>` : ''}
+      </div>
+      <button onclick="openEdit('${p.cislo}');event.stopPropagation();" title="Upraviť projekt"
+        style="background:none;border:1px solid var(--border);border-radius:5px;
+        width:28px;height:28px;cursor:pointer;font-size:14px;color:var(--text3);
+        display:flex;align-items:center;justify-content:center;flex-shrink:0;">✎</button>
+    </div>
+    <div class="proj-detail" id="detail-${p.cislo}">${buildDetailHtml(p)}</div>
+  </div>`;
+}
+
+const PODFAZY = {
+  'Stavebný zámer': ['Predprojektová príprava','Príprava pre profesie','Koordinácia s profesiami','Dopracovanie dokumentácie','Expedícia'],
+  'Projekt stavby': ['Príprava pre profesie','Koordinácia s profesiami','Dopracovanie dokumentácie','Expedícia'],
+};
+
+function buildDetailHtml(p) {
+  const denniky = (dennikMap[p.cislo] || []);
+  const lopta = p.lopta && ['PM','Šéf','Klient'].includes(p.lopta) ? p.lopta : '';
+  const podfazyOpts = PODFAZY[p.podfaza] || [];
+  return `
+  <div class="pd-section">
+    <div class="pd-label">Fáza</div>
+    <div class="pd-selects">
+      <select class="pd-sel" onchange="saveProjFaza('${p.cislo}','faza',this.value)">
+        <option value="">—</option>
+        ${['Štúdia','Projekcia','Inžiniering','Archív'].map(f=>`<option${p.faza===f?' selected':''}>${f}</option>`).join('')}
+      </select>
+      ${p.faza==='Projekcia'?`
+      <select class="pd-sel" onchange="saveProjFaza('${p.cislo}','podfaza',this.value)">
+        <option value="">—</option>
+        ${['Stavebný zámer','Projekt stavby'].map(f=>`<option${p.podfaza===f?' selected':''}>${f}</option>`).join('')}
+      </select>
+      ${p.podfaza?`
+      <select class="pd-sel" onchange="saveProjFaza('${p.cislo}','podpodfaza',this.value)">
+        <option value="">—</option>
+        ${podfazyOpts.map(f=>`<option${p.podpodfaza===f?' selected':''}>${f}</option>`).join('')}
+      </select>`:''}
+      `:''}
+    </div>
+  </div>
+  <div class="pd-section">
+    <div class="pd-label">Lopta</div>
+    <select class="pd-sel" onchange="saveProjLopta('${p.cislo}',this.value)">
+      <option value="">—</option>
+      ${['PM','Šéf','Klient'].map(l=>`<option${lopta===l?' selected':''}>${l}</option>`).join('')}
+    </select>
+    ${p.faza!=='Archív'?`
+    <select class="pd-sel" onchange="saveProjStav('${p.cislo}',this.value)">
+      <option value="aktivny"${(stavMap[p.cislo]||'aktivny')==='aktivny'?' selected':''}>Aktívny</option>
+      <option value="pozastaveny"${(stavMap[p.cislo]||'')==='pozastaveny'?' selected':''}>Pozastavený</option>
+    </select>`:''}
+  </div>
+  <div class="pd-section">
+    <div class="pd-label">Denník projektu</div>
+    <div class="dennik-list" id="dlist-${p.cislo}">
+      ${denniky.length ? denniky.slice().reverse().map(d=>`
+        <div class="dennik-entry">
+          <div class="dennik-datum">${d.datum}</div>
+          <div class="dennik-text">${d.text}</div>
+        </div>`).join('') : '<div style="font-size:11px;color:var(--text3);padding:4px 0;">Žiadne záznamy</div>'}
+    </div>
+    <div class="dennik-add">
+      <input class="dennik-input" id="di-${p.cislo}" placeholder="Pridať záznam…"
+        onkeydown="if(event.key==='Enter')pridajDennik('${p.cislo}')">
+      <button class="btn-add-zaz" onclick="pridajDennik('${p.cislo}')">Pridať</button>
+    </div>
+  </div>
+  <div class="pd-section">
+    <div class="pd-label">Úlohy</div>
+    <div id="pd-ulohy-${p.cislo}">${buildUlohyHtml(p)}</div>
+    <button onclick="openUlohaForm('${p.cislo}')"
+      style="margin-top:6px;background:var(--text);color:#fff;border:none;
+      border-radius:7px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">+ Úloha</button>
+  </div>`;
+}
+
+function toggleStat() {}
+function closeStat() {}
+
+// ── DENNÍK ────────────────────────────────────────────────────────────────
+function pridajDennik(cislo) {
+  const inp = document.getElementById('di-' + cislo);
+  const text = inp.value.trim();
+  if (!text) return;
+  if (!dennikMap[cislo]) dennikMap[cislo] = [];
+  const now = new Date();
+  const datum = `${now.getDate()}.${now.getMonth()+1}.${now.getFullYear()}`;
+  dennikMap[cislo].unshift({ datum, text });
+  localStorage.setItem('pmDennik', JSON.stringify(dennikMap));
+  inp.value = '';
+  const el = document.getElementById('dlist-' + cislo);
+  if (el) el.outerHTML = `<div class="dennik-list" id="dlist-${cislo}">${dennikMap[cislo].map(d=>`
+    <div class="dennik-entry">
+      <div class="dennik-datum">${d.datum}</div>
+      <div class="dennik-text">${d.text}</div>
+    </div>`).join('')}</div>`;
+}
+
+// ── FAZA / LOPTA / STAV INLINE SAVE ──────────────────────────────────────
+function saveProjFaza(cislo, field, val) {
+  const p = projects.find(x=>x.cislo===cislo); if (!p) return;
+  if (field === 'faza') { p.faza = val; p.podfaza = ''; p.podpodfaza = ''; }
+  else if (field === 'podfaza') { p.podfaza = val; p.podpodfaza = ''; }
+  else if (field === 'podpodfaza') { p.podpodfaza = val; }
+  saveToSheets(p, false);
+  renderProjects();
+}
+
+function saveProjLopta(cislo, val) {
+  const p = projects.find(x=>x.cislo===cislo); if (!p) return;
+  p.lopta = val;
+  saveToSheets(p, false);
+}
+
+function saveProjStav(cislo, val) {
+  stavMap[cislo] = val;
+  localStorage.setItem('pmStav', JSON.stringify(stavMap));
+  renderProjects();
+}
+
+// ── TASKS HTML ────────────────────────────────────────────────────────────
+function buildUlohyHtml(p) {
   const ul = (ulohy[p.cislo] || []);
-  const ulHtml = ul.length ? ul.map(u => {
+  if (!ul.length) return '<div style="font-size:11px;color:var(--text3);padding:4px 0;">Žiadne úlohy</div>';
+  return ul.map(u => {
     const stavCls = u.stav==='hotove'?'stav-hotove':u.stav==='cakam'?'stav-cakam-u':'stav-v-rieseni';
     const stavTxt = u.stav==='hotove'?'✓ Hotové':u.stav==='cakam'?'Čakám':'V riešení';
     const posledna = u.historia && u.historia.length ? u.historia[0].text : (u.popis||'');
@@ -1564,32 +1662,10 @@ function prowHtml(p) {
           <span style="color:var(--text2);">${h.text}</span>
         </div>`).join('') || '<div style="padding:8px 24px;font-size:11px;color:var(--text3)">Žiadna história</div>'}
     </div>`;
-  }).join('') : '';
-
-  return `<div style="position:relative;">
-  <div class="prow" onclick="openEdit('${p.cislo}')">
-    <div class="prow-num">${p.cislo}</div>
-    <div class="prow-body">
-      <div class="prow-name">${p.nazov}</div>
-      <div class="prow-tags">
-        ${p.faza?`<span class="tag tag-faza">${p.faza}</span>`:''}
-        ${!jeUMna(p.lopta)?`<span class="tag tag-lopta">@ ${p.lopta}</span>`:''}
-        ${p.akcia==='ÁNO'&&p.opisAkcie?`<span class="tag tag-akcia">⚡ ${p.opisAkcie.slice(0,36)}${p.opisAkcie.length>36?'…':''}</span>`:''}
-        ${ul.length?`<span class="tag" style="background:var(--bg3);color:var(--text3);">${ul.length} úloh</span>`:''}
-      </div>
-    </div>
-    <div class="prow-days ${dc}">${ds}</div>
-    <button onclick="toggleProjDetail('${p.cislo}',event)" title="Zobraziť úlohy"
-      style="background:none;border:1px solid var(--border);border-radius:5px;
-      width:28px;height:28px;cursor:pointer;font-size:11px;color:var(--text3);
-      display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:4px;">▾</button>
-  </div>
-  <div class="proj-ulohy" id="ulohy-${p.cislo}" style="display:none;">
-    ${ulHtml}
-    <div class="uloha-add-btn" onclick="openUlohaForm('${p.cislo}')">+</div>
-  </div>
-  </div>`;
+  }).join('');
 }
+
+function jeUMna(lopta) { return !lopta || lopta === 'PM'; }
 
 function openEditUloha(cislo, id, e) {
   if (e) e.stopPropagation();
@@ -1692,8 +1768,8 @@ function cycleUlohaStav(cislo, id, e) {
 
 function toggleProjDetail(cislo, e) {
   if (e) e.stopPropagation();
-  const el = document.getElementById('ulohy-' + cislo);
-  if (el) { el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+  const el = document.getElementById('detail-' + cislo);
+  if (el) el.classList.toggle('open');
 }
 
 function openUlohaForm(cislo) {
@@ -1713,10 +1789,7 @@ function openUlohaForm(cislo) {
 // ── MODAL ─────────────────────────────────────────────────────────────────
 function openAddModal() {
   document.getElementById('modalTitle').textContent = 'Nový projekt';
-  ['mCislo','mNazov','mProjectant','mPoznamka'].forEach(id=>document.getElementById(id).value='');
-  ['mFaza','mLopta'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('mAkcia').value='NIE';
-  document.getElementById('mOdKedy').value = new Date().toISOString().split('T')[0];
+  ['mCislo','mNazov','mProjectant'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('mDeadline').value='';
   document.getElementById('modal').classList.remove('hidden');
 }
@@ -1726,13 +1799,9 @@ function openEdit(cislo) {
   document.getElementById('modalTitle').textContent = p.cislo;
   document.getElementById('mCislo').value      = p.cislo;
   document.getElementById('mNazov').value      = p.nazov;
-  document.getElementById('mFaza').value       = p.faza;
-  document.getElementById('mProjectant').value = p.projektant;
-  document.getElementById('mLopta').value      = p.lopta;
-  document.getElementById('mAkcia').value      = p.akcia;
-  document.getElementById('mPoznamka').value   = p.opisAkcie||p.poznamka||'';
-  if (p.odKedy)   document.getElementById('mOdKedy').value   = p.odKedy.toISOString().split('T')[0];
+  document.getElementById('mProjectant').value = p.projektant||'';
   if (p.deadline) document.getElementById('mDeadline').value = p.deadline.toISOString().split('T')[0];
+  else document.getElementById('mDeadline').value = '';
   document.getElementById('modal').classList.remove('hidden');
 }
 
@@ -1741,35 +1810,24 @@ function closeModal() { document.getElementById('modal').classList.add('hidden')
 function saveProject() {
   const cislo = document.getElementById('mCislo').value.trim();
   if (!cislo) { showToast('Zadaj číslo projektu','err'); return; }
-  const t=new Date(); t.setHours(0,0,0,0);
-  const ok=document.getElementById('mOdKedy').value;
-  const dl=document.getElementById('mDeadline').value;
-  const odKedy=ok?new Date(ok):null;
-  const deadline=dl?new Date(dl):null;
-  const novaPoznamka = document.getElementById('mPoznamka').value;
+  const t = new Date(); t.setHours(0,0,0,0);
+  const dl = document.getElementById('mDeadline').value;
+  const deadline = dl ? new Date(dl) : null;
   const stary = projects.find(p=>p.cislo===cislo);
-  const staraPoznamka = stary?.opisAkcie || '';
   const proj = {
-    cislo, nazov:document.getElementById('mNazov').value,
-    faza:document.getElementById('mFaza').value,
-    projektant:document.getElementById('mProjectant').value,
-    lopta:document.getElementById('mLopta').value,
-    odKedy, dniCaka:odKedy?Math.floor((t-odKedy)/86400000):null,
-    deadline, dniDead:deadline?Math.floor((deadline-t)/86400000):null,
-    akcia:document.getElementById('mAkcia').value,
-    opisAkcie:novaPoznamka, poznamka:'',
+    ...(stary || { faza: activeFaza, podfaza:'', podpodfaza:'', lopta:'' }),
+    cislo,
+    nazov:      document.getElementById('mNazov').value,
+    projektant: document.getElementById('mProjectant').value,
+    deadline,
+    dniDead: deadline ? Math.floor((deadline-t)/86400000) : null,
   };
-  const idx=projects.findIndex(p=>p.cislo===cislo);
-  const isNew=idx<0;
-  if (isNew) projects.push(proj); else projects[idx]=proj;
-  renderAll(); closeModal();
+  const idx = projects.findIndex(p=>p.cislo===cislo);
+  const isNew = idx < 0;
+  if (isNew) projects.push(proj); else projects[idx] = proj;
+  renderProjects(); closeModal();
   showToast('Projekt '+cislo+' ukladám…','ok');
   if (cfg.url) saveToSheets(proj, isNew);
-
-  // Ak sa poznámka zmenila a je neprázdna – spýtaj sa Gemini na úlohy
-  if (novaPoznamka.trim() && novaPoznamka !== staraPoznamka) {
-    navrhniUlohyZPoznamky(cislo, novaPoznamka);
-  }
 }
 
 // ── GEMINI – NÁVRH ÚLOH ZO ZÁPISU ─────────────────────────────────────────
@@ -1872,10 +1930,11 @@ async function updatePonukaInSheets(p) {
 async function saveToSheets(proj, isNew) {
   if (!cfg.url) return;
   const row = [
-    proj.cislo,proj.nazov,proj.faza,proj.projektant,proj.lopta,
-    proj.odKedy?proj.odKedy.toISOString().split('T')[0]:'',
+    proj.cislo, proj.nazov, proj.faza, proj.projektant, proj.lopta,
+    '',
     proj.deadline?proj.deadline.toISOString().split('T')[0]:'',
-    '','',proj.akcia,proj.opisAkcie,proj.poznamka
+    proj.podfaza||'', proj.podpodfaza||'',
+    '', '', ''
   ];
   try {
     const res = await fetch(cfg.url, {method:'POST', body:JSON.stringify({action:isNew?'append':'update',row,cislo:proj.cislo})});
@@ -1883,6 +1942,36 @@ async function saveToSheets(proj, isNew) {
     if (d.ok) showToast('Uložené v Sheets ✓','ok');
     else showToast('Chyba: '+(d.error||''),'err');
   } catch(e) { showToast('Chyba zápisu','err'); }
+}
+
+// ── GEMINI – ZHRNUTIA PRE VŠETKY PROJEKTY ─────────────────────────────────
+async function geminiZhrnVsetky() {
+  if (!cfg.url) { showToast('Nastav Apps Script URL','err'); return; }
+  const list = projects.filter(p => p.faza === activeFaza && (stavMap[p.cislo]||'aktivny') === activeStav);
+  if (!list.length) { showToast('Žiadne projekty na zhrnutie','err'); return; }
+  const btn = document.getElementById('btnGemini');
+  btn.disabled = true;
+  showToast('Gemini generuje zhrnutia…','ok');
+  let done = 0;
+  for (const p of list) {
+    const entries = (dennikMap[p.cislo] || []).slice(0, 5).map(d => d.datum + ': ' + d.text).join('\n');
+    const text = entries || p.opisAkcie || p.nazov;
+    if (!text.trim()) { done++; continue; }
+    try {
+      const res = await fetch(cfg.url, {method:'POST',
+        body: JSON.stringify({action:'zhrniProjekt', cislo:p.cislo, text,
+          nazov:p.nazov, faza:[p.faza,p.podfaza,p.podpodfaza].filter(Boolean).join(' › ')})});
+      const d = await res.json();
+      if (d.ok && d.zhrnutie) {
+        geminiMap[p.cislo] = d.zhrnutie;
+      }
+    } catch(e) {}
+    done++;
+  }
+  localStorage.setItem('pmGemini', JSON.stringify(geminiMap));
+  btn.disabled = false;
+  showToast('Zhrnutia aktualizované ✓','ok');
+  renderProjects();
 }
 
 // ── PONUKY – PROJEKT SEARCH ───────────────────────────────────────────────
@@ -2100,25 +2189,7 @@ function ponukaHtml(p) {
 }
 
 // ── ARCHÍV ────────────────────────────────────────────────────────────────
-function renderArchiv() {
-  const q=document.getElementById('archivQ').value.toLowerCase().trim();
-  const list=projects.filter(p=>p.faza==='Ukončený'&&(!q||p.cislo.toLowerCase().includes(q)||p.nazov.toLowerCase().includes(q)));
-  const el=document.getElementById('listArchiv');
-  if (!list.length) {
-    el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>Žiadne ukončené projekty</div>';
-    return;
-  }
-  el.innerHTML=list.map(p=>`<div class="archiv-card" onclick="openEdit('${p.cislo}')">
-    <div class="prow-num">${p.cislo}</div>
-    <div class="prow-body">
-      <div class="prow-name">${p.nazov}</div>
-      <div class="prow-tags">
-        ${p.projektant?`<span class="tag tag-faza">${p.projektant}</span>`:''}
-      </div>
-    </div>
-    <div style="font-size:18px;color:var(--text3)">✓</div>
-  </div>`).join('');
-}
+function renderArchiv() { /* handled by renderProjects() */ }
 
 // ── PONUKY – SHEETS SYNC ──────────────────────────────────────────────────
 async function savePonukaToSheets(p) {

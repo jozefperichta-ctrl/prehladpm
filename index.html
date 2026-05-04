@@ -719,8 +719,10 @@ nav {
 <!-- CONFIG -->
 <div class="cfg-wrap hidden" id="cfgWrap">
   <div class="cfg-box">
-    <h4>⚙ Nastavenia</h4>
-    <input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <h4>⚙ Nastavenia – Caflou</h4>
+    <input id="cfgCaflouKey" placeholder="Caflou API Key" style="margin-bottom:8px;">
+    <input id="cfgCaflouId"  placeholder="Caflou Account ID" style="margin-bottom:8px;">
+    <input id="cfgGeminiUrl" placeholder="Gemini Apps Script URL (voliteľné)">
     <div class="cfg-actions">
       <button class="btn-primary" onclick="saveCfg()">Uložiť a pripojiť</button>
       <button class="btn-ghost" onclick="loadDemo()">Demo</button>
@@ -1212,10 +1214,29 @@ let geminiMap = JSON.parse(localStorage.getItem('pmGemini') || '{}');  // {cislo
 let activeFaza = 'Štúdia';
 let activeStav = 'pripravovany';
 
+// ── CAFLOU STATUS MAP ─────────────────────────────────────────────────────
+const CAFLOU_STATUS_MAP = {
+  '0_Podklady':       { faza:'Štúdia',     podfaza:'Architektúra',   id:1377376 },
+  '1_Štúdia':         { faza:'Štúdia',     podfaza:'Architektúra',   id:1377375 },
+  '2_SZ':             { faza:'Projekcia',  podfaza:'Stavebný zámer', id:2001211 },
+  '3_DSP':            { faza:'Projekcia',  podfaza:'Projekt stavby', id:1383314 },
+  '3_PS':             { faza:'Projekcia',  podfaza:'Projekt stavby', id:2001212 },
+  '4_RP':             { faza:'Projekcia',  podfaza:'',               id:1383318 },
+  '5_Inžiniering':    { faza:'Inžiniering',podfaza:'',               id:1448033 },
+  '6_Autorský dozor': { faza:'Inžiniering',podfaza:'',               id:1427152 },
+};
+// project_type_name overrides podfaza
+const CAFLOU_TYPE_PODFAZA = {
+  'Interiér':     'Interiér',
+  'Územné plány': 'Územný plán',
+};
+
 // ── INIT ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  if (cfg.url) {
-    document.getElementById('cfgUrl').value = cfg.url;
+  if (cfg.caflou_key && cfg.caflou_id) {
+    document.getElementById('cfgCaflouKey').value = cfg.caflou_key;
+    document.getElementById('cfgCaflouId').value  = cfg.caflou_id;
+    if (cfg.url) document.getElementById('cfgGeminiUrl').value = cfg.url;
     syncData();
   } else {
     loadDemo();
@@ -1250,7 +1271,11 @@ function setStavFilter(s) {
 function toggleCfg() { document.getElementById('cfgWrap').classList.toggle('hidden'); }
 
 function saveCfg() {
-  cfg = { url: document.getElementById('cfgUrl').value.trim() };
+  cfg = {
+    caflou_key: document.getElementById('cfgCaflouKey').value.trim(),
+    caflou_id:  document.getElementById('cfgCaflouId').value.trim(),
+    url:        document.getElementById('cfgGeminiUrl').value.trim(),
+  };
   localStorage.setItem('pmCfg3', JSON.stringify(cfg));
   document.getElementById('cfgWrap').classList.add('hidden');
   showToast('Uložené – synchronizujem…', 'ok');
@@ -1259,32 +1284,72 @@ function saveCfg() {
 
 // ── SYNC ──────────────────────────────────────────────────────────────────
 async function syncData() {
-  if (!cfg.url) { loadDemo(); return; }
+  if (!cfg.caflou_key || !cfg.caflou_id) { loadDemo(); return; }
   const ico = document.getElementById('syncIco');
   ico.classList.add('spin');
   try {
-    // Load projekty
-    const r1 = await fetch(cfg.url + '?sheet=Projekty&t=' + Date.now());
-    const d1 = await r1.json();
-    if (d1.error) throw new Error(d1.error);
-    projects = parseRows(d1.values || []);
-
-    // Load ponuky
-    const r2 = await fetch(cfg.url + '?sheet=Cenov%C3%A9%20ponuky&t=' + Date.now());
-    const d2 = await r2.json();
-    if (!d2.error) ponuky = parsePonukyRows(d2.values || []);
-
-    // Load maily
-    const r3 = await fetch(cfg.url + '?sheet=Maily%20%E2%80%93%20preh%C4%BEad&t=' + Date.now());
-    const d3 = await r3.json();
-    if (!d3.error) maily = parseMailyRows(d3.values || []);
-
+    let all = [], page = 1, totalPages = 1;
+    while (page <= totalPages) {
+      const r = await fetch(
+        `https://app.caflou.com/api/v1/${cfg.caflou_id}/projects?per=100&page=${page}`,
+        { headers: { 'Authorization': `Bearer ${cfg.caflou_key}` } }
+      );
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      all = all.concat(d.results || []);
+      totalPages = d.total_pages || 1;
+      page++;
+    }
+    projects = all
+      .filter(p => !p.trash && !p.template)
+      .map(parseCaflouProject);
     renderAll();
     showToast(projects.length + ' projektov', 'ok');
   } catch(e) {
     showToast('Chyba: ' + e.message, 'err');
     if (!projects.length) loadDemo();
   } finally { ico.classList.remove('spin'); }
+}
+
+function parseCaflouProject(p) {
+  const mapped = CAFLOU_STATUS_MAP[p.project_status_name] || { faza:'Štúdia', podfaza:'' };
+  const faza    = p.finished ? 'Archív' : mapped.faza;
+  const podfaza = p.finished ? '' : (CAFLOU_TYPE_PODFAZA[p.project_type_name] || mapped.podfaza);
+  const t = new Date(); t.setHours(0,0,0,0);
+  const deadline = p.end_date ? new Date(p.end_date) : null;
+  return {
+    cislo:          p.order_number || String(p.id),
+    nazov:          p.name,
+    faza,
+    podfaza,
+    podpodfaza:     '',
+    projektant:     '',
+    lopta:          '',
+    caflou_id:      p.id,
+    caflou_status:  p.project_status_name || '',
+    caflou_type:    p.project_type_name   || '',
+    deadline,
+    dniDead:        deadline ? Math.floor((deadline - t) / 86400000) : null,
+    opisAkcie:      p.description || '',
+  };
+}
+
+async function caflouPatch(caflou_id, data) {
+  if (!cfg.caflou_key || !cfg.caflou_id) return;
+  return fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/projects/${caflou_id}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ project: data })
+  });
+}
+
+async function caflouAddComment(caflou_id, text) {
+  if (!cfg.caflou_key || !cfg.caflou_id) return;
+  return fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/comments`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment: { text, commented_type: 'Project', commented_id: caflou_id } })
+  });
 }
 
 function parseMailyRows(rows) {
@@ -1466,7 +1531,16 @@ function renderProjects() {
   }
   if (activeFaza === 'Projekcia') {
     const groups = {};
-    const ORDER = ['Stavebný zámer','Projekt stavby',''];
+    const ORDER = ['Stavebný zámer','Projekt stavby','Územný plán',''];
+    list.forEach(p => { const k = p.podfaza||''; if (!groups[k]) groups[k]=[];  groups[k].push(p); });
+    el.innerHTML = ORDER.filter(k => groups[k]).map(k => `
+      <div class="faza-group">
+        ${k ? `<div class="faza-group-head">${k}</div>` : ''}
+        ${groups[k].map(p => projRowHtml(p)).join('')}
+      </div>`).join('');
+  } else if (activeFaza === 'Štúdia') {
+    const groups = {};
+    const ORDER = ['Architektúra','Interiér',''];
     list.forEach(p => { const k = p.podfaza||''; if (!groups[k]) groups[k]=[];  groups[k].push(p); });
     el.innerHTML = ORDER.filter(k => groups[k]).map(k => `
       <div class="faza-group">
@@ -1515,21 +1589,10 @@ function buildDetailHtml(p) {
   <div class="pd-section">
     <div class="pd-label">Fáza</div>
     <div class="pd-selects">
-      <select class="pd-sel" onchange="saveProjFaza('${p.cislo}','faza',this.value)">
-        <option value="">—</option>
-        ${['Štúdia','Projekcia','Inžiniering','Archív'].map(f=>`<option${p.faza===f?' selected':''}>${f}</option>`).join('')}
+      <select class="pd-sel" onchange="saveProjCaflouStatus('${p.cislo}',${p.caflou_id||'null'},this.value)">
+        ${Object.keys(CAFLOU_STATUS_MAP).map(s=>`<option value="${s}"${p.caflou_status===s?' selected':''}>${s}</option>`).join('')}
+        <option value="Archív"${p.faza==='Archív'?' selected':''}>Archív (ukončený)</option>
       </select>
-      ${p.faza==='Projekcia'?`
-      <select class="pd-sel" onchange="saveProjFaza('${p.cislo}','podfaza',this.value)">
-        <option value="">—</option>
-        ${['Stavebný zámer','Projekt stavby'].map(f=>`<option${p.podfaza===f?' selected':''}>${f}</option>`).join('')}
-      </select>
-      ${p.podfaza?`
-      <select class="pd-sel" onchange="saveProjFaza('${p.cislo}','podpodfaza',this.value)">
-        <option value="">—</option>
-        ${podfazyOpts.map(f=>`<option${p.podpodfaza===f?' selected':''}>${f}</option>`).join('')}
-      </select>`:''}
-      `:''}
     </div>
   </div>
   <div class="pd-section">
@@ -1573,7 +1636,7 @@ function toggleStat() {}
 function closeStat() {}
 
 // ── DENNÍK ────────────────────────────────────────────────────────────────
-function pridajDennik(cislo) {
+async function pridajDennik(cislo) {
   const inp = document.getElementById('di-' + cislo);
   const text = inp.value.trim();
   if (!text) return;
@@ -1589,22 +1652,34 @@ function pridajDennik(cislo) {
       <div class="dennik-datum">${d.datum}</div>
       <div class="dennik-text">${d.text}</div>
     </div>`).join('')}</div>`;
+  // Ulož aj do Caflou
+  const p = projects.find(x => x.cislo === cislo);
+  if (p?.caflou_id) {
+    try { await caflouAddComment(p.caflou_id, text); } catch(e) {}
+  }
+  showToast('Zapísané ✓', 'ok');
 }
 
 // ── FAZA / LOPTA / STAV INLINE SAVE ──────────────────────────────────────
-function saveProjFaza(cislo, field, val) {
-  const p = projects.find(x=>x.cislo===cislo); if (!p) return;
-  if (field === 'faza') { p.faza = val; p.podfaza = ''; p.podpodfaza = ''; }
-  else if (field === 'podfaza') { p.podfaza = val; p.podpodfaza = ''; }
-  else if (field === 'podpodfaza') { p.podpodfaza = val; }
-  saveToSheets(p, false);
+async function saveProjCaflouStatus(cislo, caflou_id, statusVal) {
+  const p = projects.find(x => x.cislo === cislo); if (!p) return;
+  if (statusVal === 'Archív') {
+    await caflouPatch(caflou_id, { finished: true });
+    p.faza = 'Archív'; p.podfaza = ''; p.caflou_status = '';
+  } else {
+    const mapped = CAFLOU_STATUS_MAP[statusVal]; if (!mapped) return;
+    await caflouPatch(caflou_id, { project_status_id: mapped.id, finished: false });
+    p.faza         = mapped.faza;
+    p.podfaza      = CAFLOU_TYPE_PODFAZA[p.caflou_type] || mapped.podfaza;
+    p.caflou_status = statusVal;
+  }
+  showToast('Fáza uložená ✓', 'ok');
   renderProjects();
 }
 
 function saveProjLopta(cislo, val) {
   const p = projects.find(x=>x.cislo===cislo); if (!p) return;
   p.lopta = val;
-  saveToSheets(p, false);
 }
 
 function saveProjStav(cislo, val) {
@@ -1836,8 +1911,7 @@ function saveProject() {
   const isNew = idx < 0;
   if (isNew) projects.push(proj); else projects[idx] = proj;
   renderProjects(); closeModal();
-  showToast('Projekt '+cislo+' ukladám…','ok');
-  if (cfg.url) saveToSheets(proj, isNew);
+  showToast('Projekt '+cislo+' uložený','ok');
 }
 
 // ── GEMINI – NÁVRH ÚLOH ZO ZÁPISU ─────────────────────────────────────────

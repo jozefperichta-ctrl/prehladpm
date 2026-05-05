@@ -1674,6 +1674,8 @@ async function pridajDennik(cislo) {
     try { await caflouAddComment(p.caflou_id, text); } catch(e) {}
   }
   showToast('Zapísané ✓', 'ok');
+  // Navrhni úlohy cez Gemini (ticho ak URL nie je nastavené)
+  navrhniUlohyZPoznamky(cislo, text);
 }
 
 // ── FAZA / LOPTA / STAV INLINE SAVE ──────────────────────────────────────

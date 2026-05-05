@@ -482,8 +482,10 @@ function openSpecModal(id) {
 }
 
 async function saveSpec() {
+  console.log('saveSpec called');
   const name  = document.getElementById('mSName').value.trim();
   const email = document.getElementById('mSEmail').value.trim();
+  console.log('name:', name, 'email:', email);
   if (!name || !email) { document.getElementById('mSMsg').innerHTML = '<div class="alert alert-err">Meno a e-mail sú povinné.</div>'; return; }
   const data = { name, email,
     company:    document.getElementById('mSCompany').value.trim(),

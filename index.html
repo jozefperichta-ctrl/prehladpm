@@ -1242,6 +1242,10 @@ const CAFLOU_TYPE_PODFAZA = {
   'Interiér':     'Interiér',
   'Územné plány': 'Územný plán',
 };
+// project_type_name overrides faza (ÚP je vždy Projekcia bez ohľadu na status)
+const CAFLOU_TYPE_FAZA = {
+  'Územné plány': 'Projekcia',
+};
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -1325,7 +1329,7 @@ async function syncData() {
 
 function parseCaflouProject(p) {
   const mapped = CAFLOU_STATUS_MAP[p.project_status_name] || { faza:'Štúdia', podfaza:'' };
-  const faza    = p.finished ? 'Archív' : mapped.faza;
+  const faza    = p.finished ? 'Archív' : (CAFLOU_TYPE_FAZA[p.project_type_name] || mapped.faza);
   const podfaza = p.finished ? '' : (CAFLOU_TYPE_PODFAZA[p.project_type_name] || mapped.podfaza);
   const t = new Date(); t.setHours(0,0,0,0);
   const deadline = p.end_date ? new Date(p.end_date) : null;
@@ -1681,7 +1685,7 @@ async function saveProjCaflouStatus(cislo, caflou_id, statusVal) {
   } else {
     const mapped = CAFLOU_STATUS_MAP[statusVal]; if (!mapped) return;
     await caflouPatch(caflou_id, { project_status_id: mapped.id, finished: false });
-    p.faza         = mapped.faza;
+    p.faza         = CAFLOU_TYPE_FAZA[p.caflou_type] || mapped.faza;
     p.podfaza      = CAFLOU_TYPE_PODFAZA[p.caflou_type] || mapped.podfaza;
     p.caflou_status = statusVal;
   }

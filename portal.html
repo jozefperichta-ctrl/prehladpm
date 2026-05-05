@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cenová ponuka</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg:#f5f3ef; --bg2:#fff; --bg3:#f0ede8;
+      --border:#e4dfd8;
+      --text:#2c2825; --text2:#6b6460; --text3:#9e9590;
+      --green:#1e7a4a; --grn-bg:#f0faf5; --grn-bd:#b8e6cc;
+      --blue:#1a5fa0; --blu-bg:#f0f6fd; --blu-bd:#b8d4f0;
+      --red:#c0392b; --red-bg:#fdf2f1; --red-bd:#f5c6c2;
+      --sans:'DM Sans',system-ui,sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-font-smoothing:antialiased}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;min-height:100vh}
+
+    .top{background:var(--text);color:#f5f3ef;padding:12px 18px;display:flex;align-items:center;gap:8px}
+    .top-logo{font-size:16px;font-weight:600}
+    .top-sub{font-size:13px;color:rgba(245,243,239,.45)}
+
+    .wrap{max-width:600px;margin:0 auto;padding:20px 16px}
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:14px}
+    .card h2{font-size:18px;font-weight:600;margin-bottom:4px}
+    .card .sub{font-size:14px;color:var(--text2);margin-bottom:14px}
+
+    .meta{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px}
+    .meta-item label{font-size:11px;color:var(--text3);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em}
+    .meta-item span{font-size:14px;font-weight:500}
+    .badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:500;background:var(--blu-bg);color:var(--blue);border:1px solid var(--blu-bd)}
+
+    .link-btn{display:inline-flex;align-items:center;gap:6px;color:var(--blue);font-size:14px;font-weight:500;text-decoration:none;padding:7px 12px;border:1px solid var(--blu-bd);border-radius:7px;background:var(--blu-bg)}
+    .link-btn:hover{background:#dceefb}
+
+    .divider{height:1px;background:var(--border);margin:16px 0}
+    .note{font-size:14px;color:var(--text2);line-height:1.5}
+
+    .price-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    .price-table th{text-align:left;font-size:12px;color:var(--text2);font-weight:500;padding:6px 0;border-bottom:2px solid var(--border)}
+    .price-table td{padding:9px 0;border-bottom:1px solid var(--border);vertical-align:middle}
+    .price-table tr:last-child td{border-bottom:none}
+    .phase-name{font-size:14px;font-weight:500}
+    .price-inp-wrap{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+    .price-inp-wrap input{width:120px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:14px;font-family:var(--sans);text-align:right;background:var(--bg3);outline:none;-moz-appearance:textfield}
+    .price-inp-wrap input::-webkit-outer-spin-button,.price-inp-wrap input::-webkit-inner-spin-button{-webkit-appearance:none}
+    .price-inp-wrap input:focus{border-color:var(--blue);background:var(--bg2)}
+    .price-inp-wrap span{font-size:13px;color:var(--text2);white-space:nowrap}
+
+    .frow{margin-bottom:14px}
+    .frow label{display:block;font-size:13px;color:var(--text2);font-weight:500;margin-bottom:6px}
+    .finput{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:14px;font-family:var(--sans);color:var(--text);outline:none}
+    .finput:focus{border-color:var(--blue);background:var(--bg2)}
+    textarea.finput{resize:vertical;min-height:80px}
+    .hint{font-size:12px;color:var(--text3);margin-top:5px}
+
+    .submit-btn{width:100%;padding:13px;border-radius:8px;border:none;background:var(--text);color:#f5f3ef;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer}
+    .submit-btn:hover{background:#1a1614}
+    .submit-btn:disabled{opacity:.4;cursor:not-allowed}
+
+    .alert{padding:12px 14px;border-radius:8px;font-size:14px;margin-bottom:14px}
+    .alert-ok{background:var(--grn-bg);color:var(--green);border:1px solid var(--grn-bd)}
+    .alert-err{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+    .alert-info{background:var(--blu-bg);color:var(--blue);border:1px solid var(--blu-bd)}
+
+    .status-wrap{text-align:center;padding:48px 20px}
+    .status-icon{font-size:52px;margin-bottom:14px}
+    .status-wrap h2{margin-bottom:8px;font-size:20px}
+    .status-wrap p{color:var(--text2);line-height:1.5}
+  </style>
+</head>
+<body>
+
+<div class="top">
+  <span class="top-logo">Tornyos Architects</span>
+  <span class="top-sub">· Cenová ponuka</span>
+</div>
+
+<div class="wrap" id="app">
+  <div class="card">
+    <div style="text-align:center;padding:32px;color:var(--text2)">Načítavam...</div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://cfjkomqxzqflotrqxfyl.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmamtvbXF4enFmbG90cnF4ZnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NTM1NjksImV4cCI6MjA5MzUyOTU2OX0.GUnw0I0wDrkIwaJ15TnpF_8zghW_8yIM_MZlyLF1dH8';
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+const token = new URLSearchParams(location.search).get('token');
+
+async function init() {
+  if (!token) { renderError('Neplatný link – chýba token.'); return; }
+
+  const { data: inv } = await sb.from('invitations').select('*').eq('token', token).single();
+  if (!inv) { renderError('Tento link nie je platný.'); return; }
+
+  const [{ data: req }, { data: spec }, { data: quote }] = await Promise.all([
+    sb.from('requests').select('*').eq('id', inv.request_id).single(),
+    sb.from('specialists').select('*').eq('id', inv.specialist_id).single(),
+    sb.from('quotes').select('*').eq('invitation_id', inv.id).single(),
+  ]);
+
+  if (!req) { renderError('Dopyt nebol nájdený.'); return; }
+
+  if (inv.status === 'sent') {
+    await sb.from('invitations').update({ status: 'viewed' }).eq('id', inv.id);
+  }
+
+  if (inv.status === 'selected') { renderStatus('selected', req, spec); return; }
+  if (inv.status === 'rejected') { renderStatus('rejected', req, spec); return; }
+
+  renderForm(inv, req, spec, quote);
+}
+
+function renderError(msg) {
+  document.getElementById('app').innerHTML = `
+    <div class="card">
+      <div class="status-wrap">
+        <div class="status-icon">⚠️</div>
+        <h2>Chyba</h2>
+        <p>${msg}</p>
+      </div>
+    </div>`;
+}
+
+function renderStatus(status, req, spec) {
+  const sel = status === 'selected';
+  const proj = `${req.project_cislo ? req.project_cislo + ' ' : ''}${req.project_name}`;
+  document.getElementById('app').innerHTML = `
+    <div class="card">
+      <div class="status-wrap">
+        <div class="status-icon">${sel ? '✅' : 'ℹ️'}</div>
+        <h2>${sel ? 'Boli ste vybraný' : 'Ďakujeme za ponuku'}</h2>
+        <p>${sel
+          ? `Gratulujeme${spec?.name ? ', ' + spec.name : ''}! Pre projekt <strong>${proj}</strong> ste boli vybraný ako dodávateľ.`
+          : `Pre projekt <strong>${proj}</strong> bol vybraný iný dodávateľ. Ďakujeme za Vašu ponuku a budeme radi ak sa ozvete pri ďalšom projekte.`
+        }</p>
+      </div>
+    </div>`;
+}
+
+function renderForm(inv, req, spec, existingQuote) {
+  const phases = Array.isArray(req.phases) ? req.phases : [];
+  const hasQuote = !!existingQuote;
+
+  const priceRows = phases.map(ph => {
+    const safeId = 'p_' + ph.replace(/[^a-z0-9]/gi, '_');
+    const val = existingQuote?.prices?.[ph];
+    return `<tr>
+      <td class="phase-name">${ph}</td>
+      <td>
+        <div class="price-inp-wrap">
+          <input type="number" id="${safeId}" min="0" step="100" placeholder="0" value="${val != null ? val : ''}">
+          <span>€ bez DPH</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const deadlineRow = req.current_phase ? `
+    <div class="frow">
+      <label>Termín pre fázu <strong>${req.current_phase}</strong></label>
+      <input class="finput" type="date" id="deadline" value="${existingQuote?.deadline || ''}">
+      <p class="hint">Predpokladaný dátum odovzdania podkladov</p>
+    </div>` : '';
+
+  document.getElementById('app').innerHTML = `
+    <div class="card">
+      <h2>${req.project_cislo ? req.project_cislo + ' – ' : ''}${req.project_name}</h2>
+      <div class="sub">${req.profession}</div>
+      <div class="meta">
+        ${spec ? `<div class="meta-item"><label>Pre</label><span>${spec.name}</span></div>` : ''}
+        ${req.current_phase ? `<div class="meta-item"><label>Aktuálna fáza</label><span class="badge">${req.current_phase}</span></div>` : ''}
+      </div>
+      ${req.folder_url ? `<a href="${req.folder_url}" target="_blank" class="link-btn">📁 Otvoriť podklady</a>` : ''}
+      ${req.notes ? `<div class="divider"></div><p class="note">${req.notes}</p>` : ''}
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">Vaša cenová ponuka</h3>
+
+      ${hasQuote ? '<div class="alert alert-info">Ponuka bola odoslaná. Môžete ju upraviť a znova odoslať.</div>' : ''}
+      <div id="formMsg"></div>
+
+      <table class="price-table">
+        <thead><tr><th>Fáza</th><th style="text-align:right">Cena</th></tr></thead>
+        <tbody>${priceRows}</tbody>
+      </table>
+      <p class="hint" style="margin-bottom:16px">Ak fázu neponúkate, nechajte pole prázdne.</p>
+
+      ${deadlineRow}
+
+      <div class="frow">
+        <label>Poznámka (voliteľné)</label>
+        <textarea class="finput" id="notes" placeholder="Podmienky, výhrady, otázky, referencie...">${existingQuote?.notes || ''}</textarea>
+      </div>
+
+      <button class="submit-btn" id="submitBtn"
+        onclick="submitQuote('${inv.id}',${JSON.stringify(phases)},'${req.current_phase || ''}')">
+        ${hasQuote ? 'Aktualizovať ponuku' : 'Odoslať ponuku'}
+      </button>
+    </div>`;
+}
+
+async function submitQuote(invId, phases, curPhase) {
+  const btn   = document.getElementById('submitBtn');
+  const msgEl = document.getElementById('formMsg');
+  btn.disabled = true; btn.textContent = 'Odosielam...';
+
+  const prices = {};
+  phases.forEach(ph => {
+    const safeId = 'p_' + ph.replace(/[^a-z0-9]/gi, '_');
+    const v = document.getElementById(safeId)?.value;
+    prices[ph] = v !== '' && v != null ? parseFloat(v) : null;
+  });
+
+  const deadline = curPhase ? (document.getElementById('deadline')?.value || null) : null;
+  const notes    = document.getElementById('notes')?.value.trim() || '';
+
+  const { data: existing } = await sb.from('quotes').select('id').eq('invitation_id', invId).single();
+
+  const payload = { prices, deadline, notes, submitted_at: new Date().toISOString() };
+  const { error } = existing
+    ? await sb.from('quotes').update(payload).eq('invitation_id', invId)
+    : await sb.from('quotes').insert({ ...payload, invitation_id: invId });
+
+  if (error) {
+    msgEl.innerHTML = `<div class="alert alert-err">Chyba: ${error.message}</div>`;
+    btn.disabled = false; btn.textContent = 'Odoslať ponuku';
+    return;
+  }
+
+  await sb.from('invitations').update({ status: 'submitted' }).eq('id', invId);
+  msgEl.innerHTML = '<div class="alert alert-ok">Ponuka bola úspešne odoslaná. Ďakujeme!</div>';
+  btn.textContent = 'Aktualizovať ponuku';
+  btn.disabled = false;
+}
+
+init();
+</script>
+</body>
+</html>

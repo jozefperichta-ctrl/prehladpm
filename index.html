@@ -49,6 +49,13 @@ body {
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
+/* ── MODULE NAV ── */
+.module-nav { background: var(--text); display: flex; padding: 0 12px; overflow-x: auto; scrollbar-width: none; }
+.module-nav::-webkit-scrollbar { display: none; }
+.mnav-a { color: rgba(245,243,239,.45); text-decoration: none; padding: 9px 10px; font-size: 12px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; }
+.mnav-a.cur, .mnav-a:hover { color: #f5f3ef; }
+.mnav-a.cur { border-bottom-color: rgba(245,243,239,.55); }
+
 /* ── HEADER ── */
 header {
   position: sticky; top: 0; z-index: 100;
@@ -691,6 +698,11 @@ nav {
 </style>
 </head>
 <body>
+
+<nav class="module-nav">
+  <a href="index.html" class="mnav-a cur">Projekty</a>
+  <a href="ponuky.html" class="mnav-a">Ponuky profesií</a>
+</nav>
 
 <!-- HEADER -->
 <header>

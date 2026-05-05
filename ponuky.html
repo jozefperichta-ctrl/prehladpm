@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ponuky profesií</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg:#f5f3ef; --bg2:#fff; --bg3:#f0ede8;
+      --border:#e4dfd8; --border2:#c8bfb5;
+      --text:#2c2825; --text2:#6b6460; --text3:#9e9590;
+      --green:#1e7a4a; --grn-bg:#f0faf5; --grn-bd:#b8e6cc;
+      --blue:#1a5fa0; --blu-bg:#f0f6fd; --blu-bd:#b8d4f0;
+      --orange:#c96a1a; --ora-bg:#fdf6f0; --ora-bd:#f5d9be;
+      --red:#c0392b; --red-bg:#fdf2f1; --red-bd:#f5c6c2;
+      --sans:'DM Sans',system-ui,sans-serif;
+      --r:10px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-font-smoothing:antialiased}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+
+    .module-nav{background:var(--text);display:flex;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+    .module-nav::-webkit-scrollbar{display:none}
+    .mnav-a{color:rgba(245,243,239,.45);text-decoration:none;padding:9px 10px;font-size:12px;font-weight:500;white-space:nowrap;border-bottom:2px solid transparent}
+    .mnav-a.cur,.mnav-a:hover{color:#f5f3ef}
+    .mnav-a.cur{border-bottom-color:rgba(245,243,239,.55)}
+
+    .page-hdr{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;height:52px;gap:10px;position:sticky;top:0;z-index:50}
+    .page-hdr h1{font-size:16px;font-weight:600;flex:1}
+
+    .main{max-width:880px;margin:0 auto;padding:20px 16px}
+
+    #loginWrap{max-width:380px;margin:60px auto;padding:0 16px}
+    .login-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:28px}
+    .login-card h2{font-size:18px;margin-bottom:6px}
+    .login-card p{color:var(--text2);font-size:13px;margin-bottom:20px}
+
+    .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:18px}
+    .tab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+    .tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .card+.card{margin-top:12px}
+
+    .row-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+    .row-item:last-of-type{border-bottom:none}
+    .row-item:hover{background:var(--bg3)}
+    .row-expand{display:none;padding:16px;border-top:1px solid var(--border);background:var(--bg3)}
+    .row-expand.on{display:block}
+
+    .badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500}
+    .b-sent{background:var(--blu-bg);color:var(--blue);border:1px solid var(--blu-bd)}
+    .b-viewed{background:var(--ora-bg);color:var(--orange);border:1px solid var(--ora-bd)}
+    .b-submitted{background:var(--grn-bg);color:var(--green);border:1px solid var(--grn-bd)}
+    .b-selected{background:var(--green);color:#fff}
+    .b-rejected{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+    .b-active{background:var(--grn-bg);color:var(--green);border:1px solid var(--grn-bd)}
+    .b-closed{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+
+    .qtable{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px}
+    .qtable th{text-align:left;padding:7px 8px;border-bottom:2px solid var(--border);color:var(--text2);font-weight:500;font-size:12px}
+    .qtable td{padding:8px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+    .qtable tr:last-child td{border-bottom:none}
+    .qtable tr.winner{background:var(--grn-bg)}
+    .qtable tr.loser{opacity:.5}
+
+    .frow{margin-bottom:14px}
+    .frow label{display:block;font-size:12px;color:var(--text2);font-weight:500;margin-bottom:5px}
+    .finput{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-size:14px;color:var(--text);font-family:var(--sans);outline:none}
+    .finput:focus{border-color:var(--blue);background:var(--bg2)}
+    textarea.finput{resize:vertical;min-height:70px}
+    .frow-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:480px){.frow-2{grid-template-columns:1fr}}
+
+    .chk-grid{display:flex;flex-wrap:wrap;gap:8px}
+    .chk-lbl{display:flex;align-items:center;gap:5px;font-size:13px;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;cursor:pointer}
+    .chk-lbl:has(input:checked){background:var(--blu-bg);border-color:var(--blu-bd);color:var(--blue)}
+
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:7px;border:none;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer}
+    .btn-p{background:var(--text);color:#f5f3ef}
+    .btn-p:hover{background:#1a1614}
+    .btn-g{background:transparent;color:var(--text2);border:1px solid var(--border)}
+    .btn-g:hover{background:var(--bg3)}
+    .btn-grn{background:var(--green);color:#fff}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+    .overlay{position:fixed;inset:0;background:rgba(44,40,37,.45);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:32px 12px;overflow-y:auto}
+    .modal{background:var(--bg2);border-radius:var(--r);padding:22px;width:100%;max-width:540px}
+    .modal h3{font-size:16px;margin-bottom:18px}
+
+    .alert{padding:10px 13px;border-radius:7px;font-size:13px;margin-bottom:12px}
+    .alert-ok{background:var(--grn-bg);color:var(--green);border:1px solid var(--grn-bd)}
+    .alert-err{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+
+    .link-code{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:11px;font-family:monospace;word-break:break-all;color:var(--text2)}
+    .hidden{display:none!important}
+    .mt10{margin-top:10px}
+    .mt16{margin-top:16px}
+    .empty{padding:24px 16px;color:var(--text2);font-size:13px;text-align:center}
+  </style>
+</head>
+<body>
+
+<nav class="module-nav">
+  <a href="index.html" class="mnav-a">Projekty</a>
+  <a href="ponuky.html" class="mnav-a cur">Ponuky profesií</a>
+</nav>
+
+<!-- LOGIN -->
+<div id="loginWrap">
+  <div class="login-card">
+    <h2>Ponuky profesií</h2>
+    <p>Prihláste sa pomocou e-mailovej adresy.</p>
+    <div class="frow">
+      <label>E-mail</label>
+      <input class="finput" type="email" id="loginEmail" placeholder="vas@email.com">
+    </div>
+    <div id="loginMsg"></div>
+    <button class="btn btn-p" style="width:100%;justify-content:center" onclick="sendMagicLink()">Poslať prihlasovací link</button>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminWrap" class="hidden">
+  <div class="page-hdr">
+    <h1>Ponuky profesií</h1>
+    <span style="font-size:12px;color:var(--text3)" id="navEmail"></span>
+    <button class="btn btn-g btn-sm" onclick="sb.auth.signOut()">Odhlásiť</button>
+  </div>
+  <div class="main">
+    <div class="tabs">
+      <div class="tab on" id="tabD" onclick="switchTab('d')">Dopyty</div>
+      <div class="tab" id="tabP" onclick="switchTab('p')">Profesisti</div>
+    </div>
+
+    <div id="secD">
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-p btn-sm" onclick="openReqModal()">+ Nový dopyt</button>
+      </div>
+      <div class="card" id="reqList"><div class="empty">Načítavam...</div></div>
+    </div>
+
+    <div id="secP" class="hidden">
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-p btn-sm" onclick="openSpecModal()">+ Pridať profesista</button>
+      </div>
+      <div class="card" id="specList"><div class="empty">Načítavam...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Dopyt -->
+<div class="overlay hidden" id="modalReq">
+<div class="modal">
+  <h3 id="mReqTitle">Nový dopyt</h3>
+  <div class="frow-2">
+    <div class="frow"><label>Číslo projektu</label><input class="finput" id="mRCislo" placeholder="24-021"></div>
+    <div class="frow"><label>Názov projektu</label><input class="finput" id="mRNazov" placeholder="BD Nitra"></div>
+  </div>
+  <div class="frow"><label>Profesia</label><input class="finput" id="mRProf" placeholder="Statik, TZB, Požiarnik..."></div>
+  <div class="frow">
+    <label>Fázy – pre ktoré chcete cenu</label>
+    <div class="chk-grid" id="phaseChks">
+      <label class="chk-lbl"><input type="checkbox" value="SZ"> Stavebný zámer</label>
+      <label class="chk-lbl"><input type="checkbox" value="DSP/PS"> Projekt stavby</label>
+      <label class="chk-lbl"><input type="checkbox" value="RP"> Realizačný projekt</label>
+      <label class="chk-lbl"><input type="checkbox" value="UP"> Územný plán</label>
+      <label class="chk-lbl"><input type="checkbox" value="Studia"> Štúdia</label>
+      <label class="chk-lbl"><input type="checkbox" value="Inziniering"> Inžiniering</label>
+    </div>
+  </div>
+  <div class="frow">
+    <label>Aktuálna fáza (pre termín)</label>
+    <select class="finput" id="mRCurPhase">
+      <option value="">– vybrať –</option>
+      <option value="SZ">Stavebný zámer</option>
+      <option value="DSP/PS">Projekt stavby</option>
+      <option value="RP">Realizačný projekt</option>
+      <option value="UP">Územný plán</option>
+      <option value="Studia">Štúdia</option>
+      <option value="Inziniering">Inžiniering</option>
+    </select>
+  </div>
+  <div class="frow"><label>Link na podklady (Google Drive)</label><input class="finput" type="url" id="mRFolder" placeholder="https://drive.google.com/..."></div>
+  <div class="frow"><label>Poznámka / špecifikácia</label><textarea class="finput" id="mRNotes" rows="3" placeholder="Opis predmetu, osobitné požiadavky..."></textarea></div>
+  <div id="mRMsg"></div>
+  <div class="btn-row">
+    <button class="btn btn-p" onclick="saveReq()">Uložiť</button>
+    <button class="btn btn-g" onclick="closeModal('modalReq')">Zrušiť</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: Profesista -->
+<div class="overlay hidden" id="modalSpec">
+<div class="modal">
+  <h3 id="mSpecTitle">Pridať profesista</h3>
+  <div class="frow-2">
+    <div class="frow"><label>Meno a priezvisko *</label><input class="finput" id="mSName" placeholder="Ing. Ján Novák"></div>
+    <div class="frow"><label>Firma</label><input class="finput" id="mSCompany" placeholder="Novák Statika s.r.o."></div>
+  </div>
+  <div class="frow-2">
+    <div class="frow"><label>E-mail *</label><input class="finput" type="email" id="mSEmail" placeholder="jan@example.sk"></div>
+    <div class="frow"><label>Profesia</label><input class="finput" id="mSProf" placeholder="Statik, TZB..."></div>
+  </div>
+  <div class="frow"><label>Telefón</label><input class="finput" id="mSPhone" placeholder="+421 900 000 000"></div>
+  <div class="frow"><label>Poznámka</label><textarea class="finput" id="mSNotes" rows="2"></textarea></div>
+  <div id="mSMsg"></div>
+  <div class="btn-row">
+    <button class="btn btn-p" onclick="saveSpec()">Uložiť</button>
+    <button class="btn btn-g" onclick="closeModal('modalSpec')">Zrušiť</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: Pozvánky -->
+<div class="overlay hidden" id="modalInvite">
+<div class="modal">
+  <h3>Pozvať profesistov</h3>
+  <p id="mInvDesc" style="font-size:13px;color:var(--text2);margin-bottom:14px"></p>
+  <div id="mInvList" style="max-height:320px;overflow-y:auto;margin-bottom:14px"></div>
+  <div id="mInvMsg"></div>
+  <div class="btn-row">
+    <button class="btn btn-p" onclick="doInvite()">Vygenerovať linky</button>
+    <button class="btn btn-g" onclick="closeModal('modalInvite')">Zavrieť</button>
+  </div>
+</div>
+</div>
+
+<script>
+const SB_URL = 'https://cfjkomqxzqflotrqxfyl.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmamtvbXF4enFmbG90cnF4ZnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NTM1NjksImV4cCI6MjA5MzUyOTU2OX0.GUnw0I0wDrkIwaJ15TnpF_8zghW_8yIM_MZlyLF1dH8';
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+let requests = [], specialists = [], invitations = [], quotes = [];
+let editReqId = null, editSpecId = null, inviteReqId = null;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session) {
+    document.getElementById('loginWrap').classList.add('hidden');
+    document.getElementById('adminWrap').classList.remove('hidden');
+    document.getElementById('navEmail').textContent = session.user.email;
+    await loadAll();
+  } else {
+    document.getElementById('loginWrap').classList.remove('hidden');
+    document.getElementById('adminWrap').classList.add('hidden');
+  }
+});
+
+async function sendMagicLink() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href } });
+  const el = document.getElementById('loginMsg');
+  if (error) el.innerHTML = `<div class="alert alert-err">${error.message}</div>`;
+  else el.innerHTML = `<div class="alert alert-ok">Link odoslaný na <strong>${email}</strong>. Skontrolujte e-mail.</div>`;
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const [r, s, i, q] = await Promise.all([
+    sb.from('requests').select('*').order('created_at', { ascending: false }),
+    sb.from('specialists').select('*').order('name'),
+    sb.from('invitations').select('*'),
+    sb.from('quotes').select('*'),
+  ]);
+  requests = r.data || []; specialists = s.data || [];
+  invitations = i.data || []; quotes = q.data || [];
+  renderRequests(); renderSpecialists();
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  document.getElementById('secD').classList.toggle('hidden', t !== 'd');
+  document.getElementById('secP').classList.toggle('hidden', t !== 'p');
+  document.getElementById('tabD').classList.toggle('on', t === 'd');
+  document.getElementById('tabP').classList.toggle('on', t === 'p');
+}
+
+// ── DOPYTY ────────────────────────────────────────────────────────────────────
+function renderRequests() {
+  const el = document.getElementById('reqList');
+  if (!requests.length) { el.innerHTML = '<div class="empty">Žiadne dopyty. Vytvorte prvý dopyt.</div>'; return; }
+  el.innerHTML = requests.map(r => {
+    const invs = invitations.filter(i => i.request_id === r.id);
+    const nSub = invs.filter(i => ['submitted','selected','rejected'].includes(i.status)).length;
+    return `
+      <div>
+        <div class="row-item" onclick="toggleReq('${r.id}')">
+          <span style="font-size:12px;color:var(--text3);min-width:52px">${r.project_cislo || '—'}</span>
+          <span style="font-weight:500;flex:1">${r.project_name}</span>
+          <span class="badge b-sent" style="margin-right:4px">${r.profession}</span>
+          <span style="font-size:12px;color:var(--text2);margin-right:6px">${nSub}/${invs.length}</span>
+          <span class="badge ${r.status === 'active' ? 'b-active' : 'b-closed'}">${r.status === 'active' ? 'Aktívny' : 'Uzavretý'}</span>
+        </div>
+        <div class="row-expand" id="rd-${r.id}">${buildReqDetail(r)}</div>
+      </div>`;
+  }).join('');
+}
+
+function buildReqDetail(r) {
+  const invs = invitations.filter(i => i.request_id === r.id);
+  const phases = Array.isArray(r.phases) ? r.phases : [];
+
+  let tbl;
+  if (!invs.length) {
+    tbl = '<p style="font-size:13px;color:var(--text2);margin-bottom:12px">Zatiaľ žiadni pozvaní profesisti.</p>';
+  } else {
+    const phHdr = phases.map(p => `<th>${p}</th>`).join('');
+    const rows = invs.map(inv => {
+      const sp = specialists.find(s => s.id === inv.specialist_id);
+      const q  = quotes.find(q => q.invitation_id === inv.id);
+      const cells = phases.map(p => {
+        const v = q?.prices?.[p];
+        return `<td>${v != null ? Number(v).toLocaleString('sk-SK') + ' €' : '—'}</td>`;
+      }).join('');
+      const dl  = q?.deadline ? new Date(q.deadline).toLocaleDateString('sk-SK') : '—';
+      const cls = inv.status === 'selected' ? 'winner' : inv.status === 'rejected' ? 'loser' : '';
+      const act = inv.status === 'submitted'
+        ? `<button class="btn btn-grn btn-sm" onclick="selectWinner(event,'${inv.id}','${r.id}')">Vybrať</button>`
+        : inv.status === 'selected' ? '<span style="font-size:12px;color:var(--green);font-weight:500">✓ Vybraný</span>' : '';
+      return `<tr class="${cls}">
+        <td><strong>${sp?.name || '?'}</strong><br><span style="font-size:11px;color:var(--text3)">${sp?.company || ''}</span></td>
+        ${cells}
+        <td>${dl}</td>
+        <td><span class="badge b-${inv.status}">${statusLabel(inv.status)}</span></td>
+        <td>${act}</td>
+      </tr>`;
+    }).join('');
+    tbl = `<div style="overflow-x:auto"><table class="qtable"><thead><tr><th>Profesista</th>${phHdr}<th>Termín</th><th>Stav</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  const phBadges = phases.map(p => `<span class="badge b-sent" style="margin-right:3px">${p}</span>`).join('');
+  const info = `<div style="margin-bottom:10px;font-size:13px">${phBadges}${r.current_phase ? ` <span style="color:var(--text2);margin-left:4px">Aktuálna:</span> <strong>${r.current_phase}</strong>` : ''}${r.folder_url ? ` &nbsp;<a href="${r.folder_url}" target="_blank" style="color:var(--blue)">Podklady ↗</a>` : ''}</div>`;
+  const note = r.notes ? `<p style="font-size:13px;color:var(--text2);margin-bottom:12px">${r.notes}</p>` : '';
+  const btns = `<div class="btn-row mt10">
+    <button class="btn btn-p btn-sm" onclick="openInviteModal(event,'${r.id}')">+ Pozvať profesistov</button>
+    <button class="btn btn-g btn-sm" onclick="openReqModal('${r.id}')">Upraviť</button>
+    ${r.status === 'active' ? `<button class="btn btn-g btn-sm" onclick="closeReq(event,'${r.id}')">Uzavrieť</button>` : ''}
+  </div>`;
+
+  const links = invs.length ? `<div class="mt16"><p style="font-size:12px;color:var(--text2);margin-bottom:8px">Linky pre profesistov (skopírovať a poslať emailom):</p>` +
+    invs.map(inv => {
+      const sp  = specialists.find(s => s.id === inv.specialist_id);
+      const url = `${location.origin}${location.pathname.replace('ponuky.html','portal.html')}?token=${inv.token}`;
+      return `<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text2);min-width:120px">${sp?.name || '?'}:</span>
+        <span class="link-code" style="flex:1">${url}</span>
+        <button class="btn btn-g btn-sm" onclick="copyTxt('${url}')">Kopírovať</button>
+      </div>`;
+    }).join('') + '</div>' : '';
+
+  return info + note + tbl + btns + links;
+}
+
+function toggleReq(id) { document.getElementById('rd-' + id)?.classList.toggle('on'); }
+function statusLabel(s) {
+  return {sent:'Odoslané',viewed:'Otvorené',submitted:'Ponuka',selected:'Vybraný',rejected:'Nevybraný'}[s] || s;
+}
+
+async function selectWinner(e, invId, reqId) {
+  e.stopPropagation();
+  const invs = invitations.filter(i => i.request_id === reqId);
+  await Promise.all(invs.map(i =>
+    sb.from('invitations').update({ status: i.id === invId ? 'selected' : 'rejected' }).eq('id', i.id)
+  ));
+  await loadAll();
+  document.getElementById('rd-' + reqId)?.classList.add('on');
+}
+
+async function closeReq(e, id) {
+  e.stopPropagation();
+  await sb.from('requests').update({ status: 'closed' }).eq('id', id);
+  await loadAll();
+}
+
+function copyTxt(t) { navigator.clipboard.writeText(t).catch(() => {}); }
+
+// ── REQUEST MODAL ─────────────────────────────────────────────────────────────
+function openReqModal(id) {
+  editReqId = id || null;
+  const r = id ? requests.find(r => r.id === id) : null;
+  document.getElementById('mReqTitle').textContent = r ? 'Upraviť dopyt' : 'Nový dopyt';
+  document.getElementById('mRCislo').value    = r?.project_cislo  || '';
+  document.getElementById('mRNazov').value    = r?.project_name   || '';
+  document.getElementById('mRProf').value     = r?.profession     || '';
+  document.getElementById('mRCurPhase').value = r?.current_phase  || '';
+  document.getElementById('mRFolder').value   = r?.folder_url     || '';
+  document.getElementById('mRNotes').value    = r?.notes          || '';
+  const phases = Array.isArray(r?.phases) ? r.phases : [];
+  document.querySelectorAll('#phaseChks input').forEach(cb => { cb.checked = phases.includes(cb.value); });
+  document.getElementById('mRMsg').innerHTML = '';
+  document.getElementById('modalReq').classList.remove('hidden');
+}
+
+async function saveReq() {
+  const nazov  = document.getElementById('mRNazov').value.trim();
+  const prof   = document.getElementById('mRProf').value.trim();
+  const phases = [...document.querySelectorAll('#phaseChks input:checked')].map(c => c.value);
+  if (!nazov || !prof || !phases.length) {
+    document.getElementById('mRMsg').innerHTML = '<div class="alert alert-err">Vyplňte názov, profesiu a aspoň jednu fázu.</div>';
+    return;
+  }
+  const data = {
+    project_cislo: document.getElementById('mRCislo').value.trim(),
+    project_name:  nazov, profession: prof, phases,
+    current_phase: document.getElementById('mRCurPhase').value,
+    folder_url:    document.getElementById('mRFolder').value.trim(),
+    notes:         document.getElementById('mRNotes').value.trim(),
+  };
+  const { error } = editReqId
+    ? await sb.from('requests').update(data).eq('id', editReqId)
+    : await sb.from('requests').insert(data);
+  if (error) { document.getElementById('mRMsg').innerHTML = `<div class="alert alert-err">${error.message}</div>`; return; }
+  closeModal('modalReq');
+  await loadAll();
+}
+
+// ── INVITE MODAL ──────────────────────────────────────────────────────────────
+function openInviteModal(e, reqId) {
+  e?.stopPropagation();
+  inviteReqId = reqId;
+  const r = requests.find(r => r.id === reqId);
+  document.getElementById('mInvDesc').textContent = `${r?.project_cislo ? r.project_cislo + ' – ' : ''}${r?.project_name} · ${r?.profession}`;
+  const existing = invitations.filter(i => i.request_id === reqId).map(i => i.specialist_id);
+  document.getElementById('mInvList').innerHTML = specialists.length
+    ? specialists.map(s => {
+        const done = existing.includes(s.id);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);cursor:${done ? 'default' : 'pointer'}">
+          <input type="checkbox" value="${s.id}" ${done ? 'disabled checked' : ''}>
+          <span style="flex:1"><strong>${s.name}</strong>${s.company ? ' · ' + s.company : ''} <span style="color:var(--text3);font-size:12px">${s.profession || ''}</span></span>
+          ${done ? '<span class="badge b-sent">Pozvaný</span>' : ''}
+        </label>`;
+      }).join('')
+    : '<p style="font-size:13px;color:var(--text2)">Pridajte najprv profesistov v záložke Profesisti.</p>';
+  document.getElementById('mInvMsg').innerHTML = '';
+  document.getElementById('modalInvite').classList.remove('hidden');
+}
+
+async function doInvite() {
+  const sel = [...document.querySelectorAll('#mInvList input:checked:not(:disabled)')];
+  if (!sel.length) { document.getElementById('mInvMsg').innerHTML = '<div class="alert alert-err">Vyberte aspoň jedného.</div>'; return; }
+  const { error } = await sb.from('invitations').insert(sel.map(cb => ({ request_id: inviteReqId, specialist_id: cb.value })));
+  if (error) { document.getElementById('mInvMsg').innerHTML = `<div class="alert alert-err">${error.message}</div>`; return; }
+  closeModal('modalInvite');
+  await loadAll();
+  document.getElementById('rd-' + inviteReqId)?.classList.add('on');
+}
+
+// ── PROFESISTI ────────────────────────────────────────────────────────────────
+function renderSpecialists() {
+  const el = document.getElementById('specList');
+  if (!specialists.length) { el.innerHTML = '<div class="empty">Žiadni profesisti. Pridajte prvého.</div>'; return; }
+  el.innerHTML = specialists.map(s => `
+    <div class="row-item" style="cursor:default">
+      <div style="flex:1;line-height:1.5">
+        <strong>${s.name}</strong>${s.company ? ` <span style="color:var(--text2)">· ${s.company}</span>` : ''}
+        ${s.profession ? `<span class="badge b-sent" style="margin-left:6px">${s.profession}</span>` : ''}
+        <br><span style="font-size:12px;color:var(--text2)">${s.email}${s.phone ? ' · ' + s.phone : ''}</span>
+      </div>
+      <button class="btn btn-g btn-sm" onclick="openSpecModal('${s.id}')">Upraviť</button>
+    </div>`).join('');
+}
+
+function openSpecModal(id) {
+  editSpecId = id || null;
+  const s = id ? specialists.find(s => s.id === id) : null;
+  document.getElementById('mSpecTitle').textContent = s ? 'Upraviť profesista' : 'Pridať profesista';
+  document.getElementById('mSName').value    = s?.name       || '';
+  document.getElementById('mSCompany').value = s?.company    || '';
+  document.getElementById('mSEmail').value   = s?.email      || '';
+  document.getElementById('mSProf').value    = s?.profession || '';
+  document.getElementById('mSPhone').value   = s?.phone      || '';
+  document.getElementById('mSNotes').value   = s?.notes      || '';
+  document.getElementById('mSMsg').innerHTML = '';
+  document.getElementById('modalSpec').classList.remove('hidden');
+}
+
+async function saveSpec() {
+  const name  = document.getElementById('mSName').value.trim();
+  const email = document.getElementById('mSEmail').value.trim();
+  if (!name || !email) { document.getElementById('mSMsg').innerHTML = '<div class="alert alert-err">Meno a e-mail sú povinné.</div>'; return; }
+  const data = { name, email,
+    company:    document.getElementById('mSCompany').value.trim(),
+    profession: document.getElementById('mSProf').value.trim(),
+    phone:      document.getElementById('mSPhone').value.trim(),
+    notes:      document.getElementById('mSNotes').value.trim(),
+  };
+  const { error } = editSpecId
+    ? await sb.from('specialists').update(data).eq('id', editSpecId)
+    : await sb.from('specialists').insert(data);
+  if (error) { document.getElementById('mSMsg').innerHTML = `<div class="alert alert-err">${error.message}</div>`; return; }
+  closeModal('modalSpec');
+  await loadAll();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+document.querySelectorAll('.overlay').forEach(el =>
+  el.addEventListener('click', e => { if (e.target === el) el.classList.add('hidden'); })
+);
+</script>
+</body>
+</html>

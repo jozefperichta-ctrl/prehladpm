@@ -142,6 +142,14 @@ function renderStatus(status, req, spec, quote) {
     </tr>`;
   }).join('') : '';
 
+  const reqBlock = (req.folder_url || req.folder_url_work || req.notes) ? `
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${req.notes ? '10px' : '0'}">
+      ${req.folder_url ? `<a href="${req.folder_url}" target="_blank" class="link-btn">📁 Podklady na nacenenie</a>` : ''}
+      ${req.folder_url_work ? `<a href="${req.folder_url_work}" target="_blank" class="link-btn">📂 Podklady na vypracovanie</a>` : ''}
+    </div>
+    ${req.notes ? `<p class="note">${req.notes}</p>` : ''}` : '';
+
   const quoteBlock = quote ? `
     <div class="divider"></div>
     <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Vaša odoslaná ponuka</h3>
@@ -159,6 +167,7 @@ function renderStatus(status, req, spec, quote) {
           : `Pre projekt <strong>${proj}</strong> bol vybraný iný dodávateľ. Ďakujeme za Vašu ponuku a budeme radi ak sa ozvete pri ďalšom projekte.`
         }</p>
       </div>
+      ${reqBlock}
       ${quoteBlock}
     </div>`;
 }
@@ -199,7 +208,10 @@ function renderForm(inv, req, spec, existingQuote) {
         ${spec ? `<div class="meta-item"><label>Pre</label><span>${spec.name}</span></div>` : ''}
         ${req.current_phase ? `<div class="meta-item"><label>Aktuálna fáza</label><span class="badge">${req.current_phase}</span></div>` : ''}
       </div>
-      ${req.folder_url ? `<a href="${req.folder_url}" target="_blank" class="link-btn">📁 Otvoriť podklady</a>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        ${req.folder_url ? `<a href="${req.folder_url}" target="_blank" class="link-btn">📁 Podklady na nacenenie</a>` : ''}
+        ${req.folder_url_work ? `<a href="${req.folder_url_work}" target="_blank" class="link-btn">📂 Podklady na vypracovanie</a>` : ''}
+      </div>
       ${req.notes ? `<div class="divider"></div><p class="note">${req.notes}</p>` : ''}
     </div>
 

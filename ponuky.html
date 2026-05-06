@@ -372,7 +372,7 @@ async function loadCaflouProjects() {
         headers: { 'Authorization': `Bearer ${cfg.caflou_key}` }
       });
       const d = await r.json();
-      const items = Array.isArray(d) ? d : (d.data || []);
+      const items = (d.results || []).filter(p => !p.trash && !p.template);
       all = all.concat(items);
       if (items.length < 100) break;
       page++;
@@ -386,12 +386,12 @@ function searchProjects(q) {
   if (!q.trim() || !caflouProjects.length) { box.innerHTML = ''; return; }
   const ql = q.toLowerCase();
   const matches = caflouProjects.filter(p =>
-    (p.name || '').toLowerCase().includes(ql) || (p.number || '').toLowerCase().includes(ql)
+    (p.name || '').toLowerCase().includes(ql) || (p.order_number || '').toLowerCase().includes(ql)
   ).slice(0, 8);
   if (!matches.length) { box.innerHTML = ''; return; }
   box.innerHTML = '<div class="suggest-box">' +
-    matches.map(p => `<div class="suggest-item" onclick="selectProject('${(p.number||'').replace(/'/g,"\\'")}','${(p.name||'').replace(/'/g,"\\'")}')">
-      <span style="color:var(--text3);margin-right:8px">${p.number || ''}</span>${p.name || ''}
+    matches.map(p => `<div class="suggest-item" onclick="selectProject('${(p.order_number||'').replace(/'/g,"\\'")}','${(p.name||'').replace(/'/g,"\\'")}')">
+      <span style="color:var(--text3);margin-right:8px">${p.order_number || ''}</span>${p.name || ''}
     </div>`).join('') + '</div>';
 }
 
@@ -548,7 +548,7 @@ async function saveReq() {
     document.getElementById('mRMsg').innerHTML = '<div class="alert alert-err">Vyplňte názov, profesiu a aspoň jednu fázu.</div>';
     return;
   }
-  const btn = document.querySelector('#modalReq .btn-primary');
+  const btn = document.querySelector('#modalReq .btn-p');
   if (btn) { btn.disabled = true; btn.textContent = 'Ukladám...'; }
   const data = {
     project_cislo:  document.getElementById('mRCislo').value.trim(),
@@ -745,7 +745,7 @@ async function saveSpec() {
     phone:      document.getElementById('mSPhone').value.trim(),
     notes:      document.getElementById('mSNotes').value.trim(),
   };
-  const btn = document.querySelector('#modalSpec .btn-primary');
+  const btn = document.querySelector('#modalSpec .btn-p');
   if (btn) { btn.disabled = true; btn.textContent = 'Ukladám...'; }
   const { error } = editSpecId
     ? await sb.from('specialists').update(data).eq('id', editSpecId)

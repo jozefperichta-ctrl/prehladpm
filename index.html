@@ -1668,13 +1668,7 @@ function buildDetailHtml(p) {
   </div>
   <div class="pd-section">
     <div class="pd-label">Denník projektu</div>
-    <div class="dennik-list" id="dlist-${p.cislo}">
-      ${denniky.length ? denniky.slice().reverse().map(d=>`
-        <div class="dennik-entry">
-          <div class="dennik-datum">${d.datum}</div>
-          <div class="dennik-text">${d.text}</div>
-        </div>`).join('') : '<div style="font-size:11px;color:var(--text3);padding:4px 0;">Žiadne záznamy</div>'}
-    </div>
+    <div class="dennik-list" id="dlist-${p.cislo}">${buildDennikListHtml(p.cislo)}</div>
     <div class="dennik-add">
       <input class="dennik-input" id="di-${p.cislo}" placeholder="Pridať záznam…"
         onkeydown="if(event.key==='Enter')pridajDennik('${p.cislo}')">
@@ -1694,6 +1688,27 @@ function toggleStat() {}
 function closeStat() {}
 
 // ── DENNÍK ────────────────────────────────────────────────────────────────
+function buildDennikListHtml(cislo) {
+  const entries = dennikMap[cislo] || [];
+  if (!entries.length) return '<div style="font-size:11px;color:var(--text3);padding:4px 0;">Žiadne záznamy</div>';
+  const entryHtml = e => `<div class="dennik-entry"><div class="dennik-datum">${e.datum}</div><div class="dennik-text">${e.text}</div></div>`;
+  const recent = entries.slice(0, 3);
+  const older  = entries.slice(3);
+  return `
+    ${older.length ? `<div id="dlist-older-${cislo}" style="display:none;max-height:200px;overflow-y:auto;border-bottom:1px solid var(--border);margin-bottom:4px">${older.map(entryHtml).join('')}</div>
+    <div id="dlist-toggle-${cislo}" onclick="toggleDennikOlder('${cislo}')" style="font-size:11px;color:var(--blue);cursor:pointer;padding:2px 0 6px">▸ Zobraziť staršie (${older.length})</div>` : ''}
+    ${recent.map(entryHtml).join('')}`;
+}
+
+function toggleDennikOlder(cislo) {
+  const el  = document.getElementById('dlist-older-'  + cislo);
+  const btn = document.getElementById('dlist-toggle-' + cislo);
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? `▸ Zobraziť staršie (${(dennikMap[cislo]||[]).length - 3})` : '▴ Skryť staršie';
+}
+
+
 async function pridajDennik(cislo) {
   const inp = document.getElementById('di-' + cislo);
   const text = inp.value.trim();
@@ -1705,11 +1720,7 @@ async function pridajDennik(cislo) {
   localStorage.setItem('pmDennik', JSON.stringify(dennikMap));
   inp.value = '';
   const el = document.getElementById('dlist-' + cislo);
-  if (el) el.outerHTML = `<div class="dennik-list" id="dlist-${cislo}">${dennikMap[cislo].map(d=>`
-    <div class="dennik-entry">
-      <div class="dennik-datum">${d.datum}</div>
-      <div class="dennik-text">${d.text}</div>
-    </div>`).join('')}</div>`;
+  if (el) el.outerHTML = `<div class="dennik-list" id="dlist-${cislo}">${buildDennikListHtml(cislo)}</div>`;
   // Ulož do Supabase
   try { await sb.from('dennik').insert({ cislo, datum, text }); } catch(e) {}
   // Ulož aj do Caflou

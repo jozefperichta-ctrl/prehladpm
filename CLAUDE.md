@@ -32,6 +32,7 @@ All mutable state is in module-level `let` variables:
 | `cfg` | `pmCfg3` | `{caflou_key, caflou_id, url (Gemini Apps Script)}` |
 | `activeFaza` | — | Current tab: `'Štúdia'\|'Projekcia'\|'Inžiniering'\|'Archív'` |
 | `activeStav` | — | Current status filter: `'pripravovany'\|'aktivny'\|'pozastaveny'` |
+| `caflouTasksCache` | — | `{cislo: [task,...]}` — lazy-loaded Caflou tasks per project; cleared on syncData |
 
 ### Data flow – Caflou
 
@@ -80,6 +81,35 @@ Archív        — no status filter
 `renderProjects()` re-renders the full project list. **Never call `renderAll()` / `renderProjects()` from within a project detail interaction** — it collapses all open detail panels.
 
 Use `refreshUlohy(cislo)` which updates only `#pd-ulohy-{cislo}` innerHTML for task interactions inside an open `.proj-detail`.
+
+### Caflou tasks (úlohy)
+
+Tasks are loaded lazily on first open of a project detail (`toggleProjDetail` → `loadCaflouTasks`), cached in `caflouTasksCache = {}` (cleared on `syncData`).
+
+**API filter caveat:** `GET /tasks?project_id={id}&per=100` — `per=100` works, but `project_id` filter is **ignored server-side** (same as comments API). Filtering is done client-side using `caflou_task_ids` stored on each project from `parseCaflouProject`:
+
+```javascript
+caflou_task_ids: p.task_ids || []   // from projects API response
+// in loadCaflouTasks:
+const taskIdSet = new Set(proj.caflou_task_ids);
+batch.filter(t => taskIdSet.has(t.id))
+```
+
+**Status constants:**
+```javascript
+CAFLOU_TASK_STATUS_IDS  // name → Caflou status ID
+CAFLOU_TASK_STATUS_ORDER // cycle order for status badge click
+CAFLOU_TASK_STATUS_COLOR // badge color per status
+CAFLOU_USERS             // user_id → meno
+```
+
+**Important distinction:**
+- `task_status_name === 'Hotové'` = úloha dokončená, ale stále **aktívna** (viditeľná)
+- `t.finished === true` = úloha **ukončená** (skrytá, počítaná v "N ukončených skrytých")
+- `cycleCaflouTaskStatus` cykluje statusy bez zmeny `t.finished`
+- `finishCaflouTask` (✓ tlačidlo) nastaví `finished=true` a skryje úlohu
+
+**Functions:** `loadCaflouTasks(cislo, caflou_id)`, `buildCaflouTasksHtml(cislo)`, `cycleCaflouTaskStatus(cislo, task_id)`, `finishCaflouTask(cislo, task_id)`, `createCaflouTask(cislo)`
 
 ### Gemini integration
 

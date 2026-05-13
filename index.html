@@ -730,6 +730,14 @@ nav {
     </svg>
     <span class="hbtn-lbl">Ponuky</span>
   </a>
+  <button class="hbtn" id="btnPortfolio" onclick="geminiZhrnPortfolio()" title="Celkový stav portfólia">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <span class="hbtn-lbl">Stav</span>
+  </button>
   <button class="hbtn" onclick="toggleCfg()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="3"></circle>
@@ -1174,6 +1182,17 @@ nav {
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- MODAL – STAV PORTFÓLIA (Gemini) -->
+<div class="overlay hidden" id="portfolioModal">
+  <div class="modal" style="max-width:600px">
+    <h3>Celkový stav portfólia</h3>
+    <div id="portfolioBody" style="font-size:13px;line-height:1.6;color:var(--text);max-height:65vh;overflow-y:auto;white-space:pre-wrap;padding:4px 0"></div>
+    <div class="mactions">
+      <button class="btn-ghost" onclick="document.getElementById('portfolioModal').classList.add('hidden')">Zavrieť</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL – NÁVRHY ÚLOH (Gemini) -->
 <div class="overlay hidden" id="navrhyModal">
@@ -2444,6 +2463,46 @@ async function geminiZhrnVsetky() {
   btn.disabled = false;
   showToast('Zhrnutia aktualizované ✓','ok');
   renderProjects();
+}
+
+async function geminiZhrnPortfolio() {
+  if (!cfg.url) { showToast('Nastav Apps Script URL','err'); return; }
+  const btn = document.getElementById('btnPortfolio');
+  btn.disabled = true;
+  const modal = document.getElementById('portfolioModal');
+  const body  = document.getElementById('portfolioBody');
+  body.textContent = 'Gemini analyzuje portfólio…';
+  modal.classList.remove('hidden');
+
+  const active = projects.filter(p =>
+    p.faza !== 'Archív' && p.caflou_type !== 'Interná réžia' &&
+    (stavMap[p.cislo] || 'pripravovany') === 'aktivny'
+  );
+  const all = projects.filter(p =>
+    p.faza !== 'Archív' && p.caflou_type !== 'Interná réžia'
+  );
+  const lines = all.map(p => {
+    const stav = stavMap[p.cislo] || 'pripravovany';
+    const entries = (dennikMap[p.cislo] || []).slice(0, 3)
+      .map(d => '  ' + d.datum + ': ' + d.text).join('\n');
+    return `### ${p.cislo} ${p.nazov} [${p.faza}${p.podfaza?' › '+p.podfaza:''}, ${stav}]${entries ? '\n' + entries : '\n  (žiadne záznamy)'}`;
+  }).join('\n\n');
+
+  const text = `Aktívnych projektov: ${active.length} / Celkovo: ${all.length}\n\n${lines}`;
+
+  try {
+    const res = await fetch(cfg.url, { method:'POST',
+      body: JSON.stringify({ action:'zhrniPortfolio', text }) });
+    const d = await res.json();
+    if (d.ok && d.zhrnutie) {
+      body.textContent = d.zhrnutie;
+    } else {
+      body.textContent = 'Chyba: ' + (d.error || 'neznáma chyba');
+    }
+  } catch(e) {
+    body.textContent = 'Chyba spojenia: ' + e.message;
+  }
+  btn.disabled = false;
 }
 
 // ── PONUKY – PROJEKT SEARCH ───────────────────────────────────────────────

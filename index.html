@@ -764,6 +764,9 @@ nav {
       <button class="stab" id="stabAkt" onclick="setStavFilter('aktivny')">Aktívne</button>
       <button class="stab" id="stabPoz" onclick="setStavFilter('pozastaveny')">Pozastavené</button>
     </div>
+    <input id="searchInput" type="search" placeholder="Hľadať projekt…" oninput="setSearch(this.value)"
+      style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border);border-radius:7px;
+      padding:5px 10px;font-size:12px;color:var(--text);font-family:var(--sans);outline:none;max-width:220px">
     <button class="hbtn" id="btnGemini" onclick="geminiZhrnVsetky()" title="Generovať Gemini zhrnutia">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -1266,6 +1269,8 @@ let dennikMap = JSON.parse(localStorage.getItem('pmDennik') || '{}');  // {cislo
 let geminiMap = JSON.parse(localStorage.getItem('pmGemini') || '{}');  // {cislo: 'text'}
 let activeFaza = 'Štúdia';
 let activeStav = 'pripravovany';
+let searchQuery = '';
+const caflouTaskEditSet = new Set();
 
 // ── CAFLOU STATUS MAP ─────────────────────────────────────────────────────
 const CAFLOU_STATUS_MAP = {
@@ -1318,10 +1323,37 @@ function goTab(name) {
 
 function setStavFilter(s) {
   activeStav = s;
+  searchQuery = '';
+  const si = document.getElementById('searchInput'); if (si) si.value = '';
   document.getElementById('stabPrip').classList.toggle('active', s === 'pripravovany');
   document.getElementById('stabAkt').classList.toggle('active', s === 'aktivny');
   document.getElementById('stabPoz').classList.toggle('active', s === 'pozastaveny');
   renderProjects();
+}
+
+function setSearch(q) {
+  searchQuery = q.trim();
+  renderProjects();
+}
+
+function switchToProject(cislo) {
+  const p = projects.find(x => x.cislo === cislo); if (!p) return;
+  searchQuery = '';
+  const si = document.getElementById('searchInput'); if (si) si.value = '';
+  activeFaza = p.faza;
+  if (p.faza !== 'Archív') {
+    activeStav = stavMap[p.cislo] || 'pripravovany';
+    document.getElementById('stabPrip').classList.toggle('active', activeStav === 'pripravovany');
+    document.getElementById('stabAkt').classList.toggle('active', activeStav === 'aktivny');
+    document.getElementById('stabPoz').classList.toggle('active', activeStav === 'pozastaveny');
+  }
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.faza === p.faza));
+  document.getElementById('phaseBar').style.display = p.faza === 'Archív' ? 'none' : '';
+  renderProjects();
+  setTimeout(() => {
+    const el = document.getElementById('detail-' + cislo);
+    if (el) { toggleProjDetail(cislo); el.scrollIntoView({ behavior:'smooth', block:'center' }); }
+  }, 50);
 }
 
 // ── CONFIG ─────────────────────────────────────────────────────────────────
@@ -1600,6 +1632,29 @@ function renderAll() { renderProjects(); }
 function renderProjects() {
   const el = document.getElementById('listProjects');
   let list;
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    list = projects.filter(p =>
+      p.caflou_type !== 'Interná réžia' &&
+      (p.nazov.toLowerCase().includes(q) || p.cislo.toLowerCase().includes(q))
+    );
+    const FAZA_COLOR = {'Štúdia':'var(--blue)','Projekcia':'var(--orange)','Inžiniering':'#7c3aed','Archív':'var(--text3)'};
+    el.innerHTML = list.length
+      ? list.map(p => {
+          const fc = FAZA_COLOR[p.faza] || 'var(--text3)';
+          return `<div class="proj-row" onclick="switchToProject('${p.cislo}')">
+            <div class="prow-num">${p.cislo}</div>
+            <div class="prow-body">
+              <div class="prow-name">${p.nazov}</div>
+              <div class="prow-podfaza"><span style="color:${fc};font-weight:600">${p.faza}</span>${p.podfaza?' · '+p.podfaza:''}</div>
+            </div>
+          </div>`;
+        }).join('')
+      : emptyHtml('Žiadny projekt nezodpovedá hľadaniu');
+    return;
+  }
+
   if (activeFaza === 'Archív') {
     list = projects.filter(p => p.faza === 'Archív');
     el.innerHTML = list.length
@@ -2020,6 +2075,8 @@ function buildCaflouTasksHtml(cislo) {
   const active   = tasks.filter(t => !t.finished);
   const doneCount = tasks.length - active.length;
   if (!active.length && !doneCount) return '<div style="font-size:11px;color:var(--text3);padding:4px 0">Žiadne úlohy</div>';
+  const userOpts = `<option value="">— bez priradenia —</option>` +
+    Object.entries(CAFLOU_USERS).map(([id,n]) => `<option value="${id}">${n}</option>`).join('');
   const rows = active.map(t => {
     const col = CAFLOU_TASK_STATUS_COLOR[t.task_status_name] || 'var(--text3)';
     const assignee = t.target_user_id ? (CAFLOU_USERS[t.target_user_id] || '') : '';
@@ -2030,17 +2087,33 @@ function buildCaflouTasksHtml(cislo) {
       const dc = days < 0 ? 'var(--red)' : days <= 3 ? 'var(--orange)' : 'var(--text3)';
       deadStr = `<span style="font-size:10px;color:${dc};flex-shrink:0">${dt.getDate()}.${dt.getMonth()+1}.</span>`;
     }
-    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-      <span onclick="event.stopPropagation();cycleCaflouTaskStatus('${cislo}',${t.id})"
-        style="flex-shrink:0;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;
-        background:${col}22;color:${col};border:1px solid ${col}44;white-space:nowrap">${t.task_status_name}</span>
-      <span style="flex:1">${t.name}</span>
-      ${assignee ? `<span style="font-size:10px;color:var(--text3);flex-shrink:0">${assignee}</span>` : ''}
-      ${deadStr}
-      <button onclick="event.stopPropagation();finishCaflouTask('${cislo}',${t.id})"
-        title="Ukončiť" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:5px;
-        width:22px;height:22px;cursor:pointer;font-size:12px;color:var(--text3);
-        display:flex;align-items:center;justify-content:center">✓</button>
+    const editKey = cislo + '-' + t.id;
+    const editOpen = caflouTaskEditSet.has(editKey);
+    const curDate = t.end_time ? t.end_time.substring(0,10) : '';
+    const selOpts = userOpts.replace(`value="${t.target_user_id || ''}"`, `value="${t.target_user_id || ''}" selected`);
+    return `<div style="border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 0;font-size:12px">
+        <span onclick="event.stopPropagation();cycleCaflouTaskStatus('${cislo}',${t.id})"
+          style="flex-shrink:0;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;
+          background:${col}22;color:${col};border:1px solid ${col}44;white-space:nowrap">${t.task_status_name}</span>
+        <span style="flex:1">${t.name}</span>
+        ${assignee ? `<span style="font-size:10px;color:var(--text3);flex-shrink:0">${assignee}</span>` : ''}
+        ${deadStr}
+        <button onclick="event.stopPropagation();toggleTaskEdit('${cislo}',${t.id})"
+          title="Upraviť" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:5px;
+          width:22px;height:22px;cursor:pointer;font-size:11px;color:var(--text3);
+          display:flex;align-items:center;justify-content:center">✎</button>
+        <button onclick="event.stopPropagation();finishCaflouTask('${cislo}',${t.id})"
+          title="Ukončiť" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:5px;
+          width:22px;height:22px;cursor:pointer;font-size:12px;color:var(--text3);
+          display:flex;align-items:center;justify-content:center">✓</button>
+      </div>
+      <div id="te-${editKey}" style="display:${editOpen?'flex':'none'};gap:6px;padding:4px 0 8px 0;flex-wrap:wrap;align-items:center" onclick="event.stopPropagation()">
+        <select id="tu-${editKey}" class="pd-sel" style="flex:1;min-width:120px;font-size:12px">${selOpts}</select>
+        <input id="td-${editKey}" type="date" value="${curDate}" class="pd-sel" style="font-size:12px;flex:1;min-width:110px">
+        <button onclick="event.stopPropagation();saveCaflouTaskEdit('${cislo}',${t.id})"
+          style="background:var(--text);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600">Uložiť</button>
+      </div>
     </div>`;
   }).join('');
   const doneNote = doneCount ? `<div style="font-size:10px;color:var(--text3);padding:4px 0">${doneCount} ukončených úloh skrytých</div>` : '';
@@ -2078,6 +2151,37 @@ async function finishCaflouTask(cislo, task_id) {
       body: JSON.stringify({ task: { task_status_id: CAFLOU_TASK_STATUS_IDS['Hotové'], finished: true } })
     });
   } catch(e) {}
+}
+
+function toggleTaskEdit(cislo, task_id) {
+  const key = cislo + '-' + task_id;
+  const el = document.getElementById('te-' + key); if (!el) return;
+  const open = el.style.display !== 'none';
+  if (open) { el.style.display = 'none'; caflouTaskEditSet.delete(key); }
+  else { el.style.display = 'flex'; caflouTaskEditSet.add(key); }
+}
+
+async function saveCaflouTaskEdit(cislo, task_id) {
+  const tasks = caflouTasksCache[cislo]; if (!tasks) return;
+  const t = tasks.find(x => x.id === task_id); if (!t) return;
+  const key = cislo + '-' + task_id;
+  const uid  = document.getElementById('tu-' + key)?.value;
+  const date = document.getElementById('td-' + key)?.value;
+  t.target_user_id = uid ? parseInt(uid) : null;
+  t.end_time = date ? date + 'T17:00:00+02:00' : null;
+  caflouTaskEditSet.delete(key);
+  refreshUlohy(cislo);
+  try {
+    await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks/${task_id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: {
+        ...(uid ? { target_user_id: parseInt(uid) } : { target_user_id: null }),
+        ...(date ? { end_time: date + 'T17:00:00+02:00' } : { end_time: null }),
+      }})
+    });
+    showToast('Uložené ✓', 'ok');
+  } catch(e) { showToast('Chyba ukladania', 'err'); }
 }
 
 function toggleExtProf(cislo) {

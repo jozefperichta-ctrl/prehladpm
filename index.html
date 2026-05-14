@@ -1290,7 +1290,6 @@ let activeFaza = 'Štúdia';
 let activeStav = 'pripravovany';
 let searchQuery = '';
 const caflouTaskEditSet = new Set();
-let taskExtMap = JSON.parse(localStorage.getItem('pmTaskExt') || '{}');
 
 // ── CAFLOU STATUS MAP ─────────────────────────────────────────────────────
 const CAFLOU_STATUS_MAP = {
@@ -2137,8 +2136,8 @@ function buildCaflouTasksHtml(cislo) {
   }
   const label = (txt, first) =>
     `<div style="font-size:10px;font-weight:600;color:var(--text3);padding:${first?'4px':'8px'} 0 2px 0;text-transform:uppercase;letter-spacing:0.5px">${txt}</div>`;
-  const internal = active.filter(t => !taskExtMap[t.id]);
-  const external = active.filter(t => !!taskExtMap[t.id]);
+  const internal = active.filter(t => t.description !== 'ext');
+  const external = active.filter(t => t.description === 'ext');
   let html = '';
   if (internal.length) html += label('Interné', true) + internal.map(rowHtml).join('');
   if (external.length) html += label('Externé', !internal.length) + external.map(rowHtml).join('');
@@ -2217,8 +2216,6 @@ async function deleteCaflouTask(cislo, task_id) {
   if (!confirm('Vymazať úlohu?')) return;
   const tasks = caflouTasksCache[cislo]; if (!tasks) return;
   caflouTasksCache[cislo] = tasks.filter(t => t.id !== task_id);
-  delete taskExtMap[task_id];
-  localStorage.setItem('pmTaskExt', JSON.stringify(taskExtMap));
   refreshUlohy(cislo);
   try {
     await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks/${task_id}`, {
@@ -2245,6 +2242,7 @@ async function createCaflouTask(cislo) {
   const body = { task: {
     name, project_id: p.caflou_id,
     task_status_id: CAFLOU_TASK_STATUS_IDS['Nové'],
+    ...(isExt ? { description: 'ext' } : {}),
     ...(!isExt && uid ? { target_user_id: parseInt(uid) } : {}),
     ...(date ? { end_time: date + 'T17:00:00+02:00' } : {}),
   }};
@@ -2255,13 +2253,6 @@ async function createCaflouTask(cislo) {
       body: JSON.stringify(body)
     });
     if (!r.ok) throw new Error(await r.text());
-    if (isExt) {
-      try {
-        const rd = await r.json();
-        const newId = rd?.task?.id || rd?.id;
-        if (newId) { taskExtMap[newId] = true; localStorage.setItem('pmTaskExt', JSON.stringify(taskExtMap)); }
-      } catch(e) {}
-    }
     document.getElementById('uf-name-' + cislo).value = '';
     document.getElementById('uf-date-' + cislo).value = '';
     document.getElementById('uf-user-' + cislo).value = '';

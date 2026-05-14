@@ -109,7 +109,20 @@ CAFLOU_USERS             // user_id → meno
 - `cycleCaflouTaskStatus` cykluje statusy bez zmeny `t.finished`
 - `finishCaflouTask` (✓ tlačidlo) nastaví `finished=true` a skryje úlohu
 
-**Functions:** `loadCaflouTasks(cislo, caflou_id)`, `buildCaflouTasksHtml(cislo)`, `cycleCaflouTaskStatus(cislo, task_id)`, `finishCaflouTask(cislo, task_id)`, `createCaflouTask(cislo)`
+**Interné / Externé kategórie:**
+- Rozdelenie podľa Caflou tagu `ext` na tasku: `(t.tags||[]).includes('ext')` = externá
+- Externá úloha sa vytvorí s `tags: ['ext']` v POST body
+- V edit forme: tlačidlo **"Interné ✓" / "Externé ✓"** (`id="ttype-{editKey}"`, `data-ext="0/1"`) — len vizuálny toggle, uloží sa až pri **Uložiť**
+- `toggleTaskExtBtn(editKey)` — prepína text/data-ext bez PATCHu
+- `saveCaflouTaskEdit` číta `extBtn.dataset.ext` a zahrnie `tags` do PATCH
+- **Caflou custom fields na taskoch nie sú dostupné cez API** — vracajú prázdne pole
+
+**Editovanie a mazanie:**
+- Edit forma má aj pole pre zmenu názvu (`id="tn-{editKey}"`) — PATCHuje `name`
+- ✕ tlačidlo → `deleteCaflouTask(cislo, task_id)` — confirm → DELETE na Caflou API
+- `deleteCaflouTask` odstraní task z cache a zavolá `refreshUlohy`
+
+**Functions:** `loadCaflouTasks(cislo, caflou_id)`, `buildCaflouTasksHtml(cislo)`, `cycleCaflouTaskStatus(cislo, task_id)`, `finishCaflouTask(cislo, task_id)`, `createCaflouTask(cislo)`, `toggleTaskExtBtn(editKey)`, `deleteCaflouTask(cislo, task_id)`
 
 ### Gemini integration
 
@@ -129,6 +142,10 @@ CAFLOU_USERS             // user_id → meno
 - Po každej zmene kódu treba aktualizovať nasadenie (Deploy → Manage → nová verzia)
 - Trigger `sledujMaily` — time-driven, každú hodinu; hľadá `newer_than:1d label:inbox`
 - `oauthScopes` v `appsscript.json` musí obsahovať `https://mail.google.com/`
+- `doPost` **musí mať try-catch** okolo celého tela — inak nekachnutý exception vráti HTML bez CORS hlavičiek → prehliadač dostane "Failed to fetch"
+- Gemini model: `gemini-2.0-flash` (nie `gemini-2.5-flash` — nižšia kvóta na free tier)
+- `akcia_zhrniPortfolio` **nepoužíva SYSTEM_PROMPT** — prompt by bol príliš dlhý (429). Používa vlastný krátky prompt priamo vo funkcii
+- Frontend `geminiZhrnPortfolio` posiela len aktívne projekty, max 2 denník záznamy/projekt, celkovo max 6000 znakov
 
 ### Externý profesista → automatický dopyt
 

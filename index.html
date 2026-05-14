@@ -2129,7 +2129,7 @@ function buildCaflouTasksHtml(cislo) {
           <select id="tu-${editKey}" class="pd-sel" style="flex:1;min-width:120px;font-size:12px">${selOpts}</select>
           <input id="td-${editKey}" type="date" value="${curDate}" class="pd-sel" style="font-size:12px;flex:1;min-width:110px">
           <button onclick="event.stopPropagation();toggleTaskExt('${cislo}',${t.id})"
-            style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--text3);white-space:nowrap">${t.description==='ext'?'→ Interné':'→ Externé'}</button>
+            style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--text3);white-space:nowrap">${(t.tags||[]).includes('ext')?'→ Interné':'→ Externé'}</button>
           <button onclick="event.stopPropagation();saveCaflouTaskEdit('${cislo}',${t.id})"
             style="background:var(--text);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600">Uložiť</button>
         </div>
@@ -2138,8 +2138,8 @@ function buildCaflouTasksHtml(cislo) {
   }
   const label = (txt, first) =>
     `<div style="font-size:10px;font-weight:600;color:var(--text3);padding:${first?'4px':'8px'} 0 2px 0;text-transform:uppercase;letter-spacing:0.5px">${txt}</div>`;
-  const internal = active.filter(t => t.description !== 'ext');
-  const external = active.filter(t => t.description === 'ext');
+  const internal = active.filter(t => !(t.tags || []).includes('ext'));
+  const external = active.filter(t => (t.tags || []).includes('ext'));
   let html = '';
   if (internal.length) html += label('Interné', true) + internal.map(rowHtml).join('');
   if (external.length) html += label('Externé', !internal.length) + external.map(rowHtml).join('');
@@ -2217,13 +2217,14 @@ async function saveCaflouTaskEdit(cislo, task_id) {
 async function toggleTaskExt(cislo, task_id) {
   const tasks = caflouTasksCache[cislo]; if (!tasks) return;
   const t = tasks.find(x => x.id === task_id); if (!t) return;
-  t.description = t.description === 'ext' ? '' : 'ext';
+  const isExt = (t.tags || []).includes('ext');
+  t.tags = isExt ? (t.tags || []).filter(x => x !== 'ext') : [...(t.tags || []), 'ext'];
   refreshUlohy(cislo);
   try {
     await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks/${task_id}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: { description: t.description } })
+      body: JSON.stringify({ task: { tags: t.tags } })
     });
   } catch(e) {}
 }
@@ -2258,7 +2259,7 @@ async function createCaflouTask(cislo) {
   const body = { task: {
     name, project_id: p.caflou_id,
     task_status_id: CAFLOU_TASK_STATUS_IDS['Nové'],
-    ...(isExt ? { description: 'ext' } : {}),
+    ...(isExt ? { tags: ['ext'] } : {}),
     ...(!isExt && uid ? { target_user_id: parseInt(uid) } : {}),
     ...(date ? { end_time: date + 'T17:00:00+02:00' } : {}),
   }};

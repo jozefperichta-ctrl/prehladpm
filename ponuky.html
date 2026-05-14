@@ -699,18 +699,28 @@ function openInviteModal(e, reqId) {
 
   if (contacts.length) {
     const allLabels = [...new Set(contacts.flatMap(c => c.labels || []))].sort((a,b) => a.localeCompare(b,'sk'));
+    const existing  = invitations.filter(i => i.request_id === reqId).map(i => specialists.find(s => s.id === i.specialist_id)?.email).filter(Boolean);
     const prof = r?.profession?.toLowerCase() || '';
-    const match = allLabels.find(l => l.toLowerCase().includes(prof) || prof.includes(l.toLowerCase())) || '';
-    const opts  = allLabels.map(l => `<option value="${l}" ${l === match ? 'selected' : ''}>${l}</option>`).join('');
-    document.getElementById('mInvList').innerHTML = `
-      <div class="frow" style="margin-bottom:10px">
-        <label>Filtr podľa profesie</label>
-        <select class="finput" id="invProfFilter" onchange="renderInviteList('${reqId}')">
-          <option value="">Všetci</option>${opts}
-        </select>
-      </div>
-      <div id="invContactList"></div>`;
-    renderInviteList(reqId);
+    const matchLabel = allLabels.find(l => l.toLowerCase().includes(prof) || prof.includes(l.toLowerCase())) || '';
+    document.getElementById('mInvList').innerHTML = allLabels.map(label => {
+      const labelContacts = contacts.filter(c => (c.labels || []).includes(label));
+      if (!labelContacts.length) return '';
+      const rows = labelContacts.map(c => {
+        const done = existing.includes(c.email);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:${done?'default':'pointer'}">
+          <input type="checkbox" data-email="${c.email}" ${done ? 'disabled checked' : ''}>
+          <span style="flex:1"><strong>${c.name}</strong>${c.company ? ' · ' + c.company : ''}</span>
+          ${done ? '<span class="badge b-sent">Pozvaný</span>' : ''}
+        </label>`;
+      }).join('');
+      return `<details ${label === matchLabel ? 'open' : ''} style="margin-bottom:4px">
+        <summary style="font-size:13px;font-weight:600;cursor:pointer;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px">
+          <span style="font-size:10px;color:var(--text3)">▶</span>${label}
+          <span style="font-weight:400;font-size:12px;color:var(--text3)">(${labelContacts.length})</span>
+        </summary>
+        <div style="padding-left:4px">${rows}</div>
+      </details>`;
+    }).join('');
   } else {
     const existing = invitations.filter(i => i.request_id === reqId).map(i => i.specialist_id);
     document.getElementById('mInvList').innerHTML = specialists.length
@@ -729,39 +739,17 @@ function openInviteModal(e, reqId) {
   document.getElementById('modalInvite').classList.remove('hidden');
 }
 
-function renderInviteList(reqId) {
-  const filterVal = document.getElementById('invProfFilter')?.value || '';
-  const existing  = invitations.filter(i => i.request_id === reqId).map(i => {
-    const sp = specialists.find(s => s.id === i.specialist_id);
-    return sp?.email;
-  }).filter(Boolean);
-
-  const filtered = filterVal ? contacts.filter(c => (c.labels || []).includes(filterVal)) : contacts;
-  const el = document.getElementById('invContactList');
-  if (!filtered.length) {
-    el.innerHTML = '<p style="font-size:13px;color:var(--text2);padding-top:8px">Žiadni profesisti pre túto profesiu.</p>';
-    return;
-  }
-  el.innerHTML = filtered.map(c => {
-    const done = existing.includes(c.email);
-    return `<label style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);cursor:${done ? 'default' : 'pointer'}">
-      <input type="checkbox" data-email="${c.email}" ${done ? 'disabled checked' : ''}>
-      <span style="flex:1"><strong>${c.name}</strong>${c.company ? ' · ' + c.company : ''} <span style="color:var(--text3);font-size:12px">${(c.labels || []).join(', ')}</span></span>
-      ${done ? '<span class="badge b-sent">Pozvaný</span>' : ''}
-    </label>`;
-  }).join('');
-}
 
 async function doInvite() {
   const msgEl = document.getElementById('mInvMsg');
 
   if (contacts.length) {
-    const sel = [...document.querySelectorAll('#invContactList input[data-email]:checked:not(:disabled)')];
+    const sel = [...document.querySelectorAll('#mInvList input[data-email]:checked:not(:disabled)')];
     if (!sel.length) { msgEl.innerHTML = '<div class="alert alert-err">Vyberte aspoň jedného.</div>'; return; }
 
     const toUpsert = sel.map(cb => {
       const c = contacts.find(x => x.email === cb.dataset.email);
-      return { email: c.email, name: c.name, company: c.company || '', profession: (c.labels || []).join(', '), phone: c.phone || '' };
+      return { email: c.email, name: c.name, company: c.company || '', profession: (c.labels || [])[0] || '', phone: c.phone || '' };
     });
     const { data: upserted, error: upsErr } = await sb.from('specialists')
       .upsert(toUpsert, { onConflict: 'email' }).select('id, email');

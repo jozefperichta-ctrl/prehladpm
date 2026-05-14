@@ -1290,6 +1290,7 @@ let activeFaza = 'Štúdia';
 let activeStav = 'pripravovany';
 let searchQuery = '';
 const caflouTaskEditSet = new Set();
+const extSpecCache = {}; // {cislo: {taskName: specialistName}}
 
 // ── CAFLOU STATUS MAP ─────────────────────────────────────────────────────
 const CAFLOU_STATUS_MAP = {
@@ -2073,6 +2074,20 @@ async function loadCaflouTasks(cislo, caflou_id) {
       page++;
     }
     caflouTasksCache[cislo] = all;
+    try {
+      const { data: reqs } = await sb.from('requests').select('id,profession,notes').eq('project_cislo', cislo);
+      if (reqs?.length) {
+        const reqIds = reqs.map(r => r.id);
+        const { data: invs } = await sb.from('invitations').select('request_id,specialist_id').eq('status','selected').in('request_id', reqIds);
+        if (invs?.length) {
+          const specIds = [...new Set(invs.map(i => i.specialist_id))];
+          const { data: specs } = await sb.from('specialists').select('id,name').in('id', specIds);
+          const specById = Object.fromEntries((specs||[]).map(s => [s.id, s.name]));
+          const invByReq = Object.fromEntries((invs||[]).map(i => [i.request_id, specById[i.specialist_id]||'']));
+          extSpecCache[cislo] = Object.fromEntries(reqs.map(r => [r.notes, invByReq[r.id]||'']));
+        } else { extSpecCache[cislo] = {}; }
+      }
+    } catch(e) {}
     el.innerHTML = buildCaflouTasksHtml(cislo);
   } catch(e) {
     el.innerHTML = `<div style="font-size:11px;color:var(--red);padding:4px 0">Chyba: ${e.message}</div>`;
@@ -2108,7 +2123,7 @@ function buildCaflouTasksHtml(cislo) {
           style="flex-shrink:0;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;
           background:${col}22;color:${col};border:1px solid ${col}44;white-space:nowrap">${t.task_status_name}</span>
         <span style="flex:1">${t.name}</span>
-        ${assignee ? `<span style="font-size:10px;color:var(--text3);flex-shrink:0">${assignee}</span>` : ''}
+        ${(extSpecCache[cislo]||{})[t.name] ? `<span style="font-size:10px;color:var(--green);flex-shrink:0;font-weight:500">${(extSpecCache[cislo]||{})[t.name]}</span>` : (assignee ? `<span style="font-size:10px;color:var(--text3);flex-shrink:0">${assignee}</span>` : '')}
         ${deadStr}
         <button onclick="event.stopPropagation();toggleTaskEdit('${cislo}',${t.id})"
           title="Upraviť" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:5px;
@@ -2141,8 +2156,8 @@ function buildCaflouTasksHtml(cislo) {
   const internal = active.filter(t => !(t.tags || []).includes('ext'));
   const external = active.filter(t => (t.tags || []).includes('ext'));
   let html = '';
-  if (internal.length) html += label('Interné', true) + internal.map(rowHtml).join('');
-  if (external.length) html += label('Externé', !internal.length) + external.map(rowHtml).join('');
+  if (external.length) html += label('Externé', true) + external.map(rowHtml).join('');
+  if (internal.length) html += label('Interné', !external.length) + internal.map(rowHtml).join('');
   const doneNote = doneCount ? `<div style="font-size:10px;color:var(--text3);padding:4px 0">${doneCount} ukončených úloh skrytých</div>` : '';
   return html + doneNote;
 }

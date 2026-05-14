@@ -1290,6 +1290,7 @@ let activeFaza = 'Štúdia';
 let activeStav = 'pripravovany';
 let searchQuery = '';
 const caflouTaskEditSet = new Set();
+let taskExtMap = JSON.parse(localStorage.getItem('pmTaskExt') || '{}');
 
 // ── CAFLOU STATUS MAP ─────────────────────────────────────────────────────
 const CAFLOU_STATUS_MAP = {
@@ -2087,7 +2088,7 @@ function buildCaflouTasksHtml(cislo) {
   if (!active.length && !doneCount) return '<div style="font-size:11px;color:var(--text3);padding:4px 0">Žiadne úlohy</div>';
   const userOpts = `<option value="">— bez priradenia —</option>` +
     Object.entries(CAFLOU_USERS).map(([id,n]) => `<option value="${id}">${n}</option>`).join('');
-  const rows = active.map(t => {
+  function rowHtml(t) {
     const col = CAFLOU_TASK_STATUS_COLOR[t.task_status_name] || 'var(--text3)';
     const assignee = t.target_user_id ? (CAFLOU_USERS[t.target_user_id] || '') : '';
     let deadStr = '';
@@ -2101,6 +2102,7 @@ function buildCaflouTasksHtml(cislo) {
     const editOpen = caflouTaskEditSet.has(editKey);
     const curDate = t.end_time ? t.end_time.substring(0,10) : '';
     const selOpts = userOpts.replace(`value="${t.target_user_id || ''}"`, `value="${t.target_user_id || ''}" selected`);
+    const safeName = t.name.replace(/"/g, '&quot;');
     return `<div style="border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:6px;padding:5px 0;font-size:12px">
         <span onclick="event.stopPropagation();cycleCaflouTaskStatus('${cislo}',${t.id})"
@@ -2117,17 +2119,31 @@ function buildCaflouTasksHtml(cislo) {
           title="Ukončiť" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:5px;
           width:22px;height:22px;cursor:pointer;font-size:12px;color:var(--text3);
           display:flex;align-items:center;justify-content:center">✓</button>
+        <button onclick="event.stopPropagation();deleteCaflouTask('${cislo}',${t.id})"
+          title="Vymazať" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:5px;
+          width:22px;height:22px;cursor:pointer;font-size:12px;color:var(--red);
+          display:flex;align-items:center;justify-content:center">✕</button>
       </div>
-      <div id="te-${editKey}" style="display:${editOpen?'flex':'none'};gap:6px;padding:4px 0 8px 0;flex-wrap:wrap;align-items:center" onclick="event.stopPropagation()">
-        <select id="tu-${editKey}" class="pd-sel" style="flex:1;min-width:120px;font-size:12px">${selOpts}</select>
-        <input id="td-${editKey}" type="date" value="${curDate}" class="pd-sel" style="font-size:12px;flex:1;min-width:110px">
-        <button onclick="event.stopPropagation();saveCaflouTaskEdit('${cislo}',${t.id})"
-          style="background:var(--text);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600">Uložiť</button>
+      <div id="te-${editKey}" style="display:${editOpen?'flex':'none'};gap:6px;padding:4px 0 8px 0;flex-direction:column" onclick="event.stopPropagation()">
+        <input id="tn-${editKey}" value="${safeName}" class="pd-sel" style="font-size:12px;width:100%;box-sizing:border-box">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <select id="tu-${editKey}" class="pd-sel" style="flex:1;min-width:120px;font-size:12px">${selOpts}</select>
+          <input id="td-${editKey}" type="date" value="${curDate}" class="pd-sel" style="font-size:12px;flex:1;min-width:110px">
+          <button onclick="event.stopPropagation();saveCaflouTaskEdit('${cislo}',${t.id})"
+            style="background:var(--text);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600">Uložiť</button>
+        </div>
       </div>
     </div>`;
-  }).join('');
+  }
+  const label = (txt, first) =>
+    `<div style="font-size:10px;font-weight:600;color:var(--text3);padding:${first?'4px':'8px'} 0 2px 0;text-transform:uppercase;letter-spacing:0.5px">${txt}</div>`;
+  const internal = active.filter(t => !taskExtMap[t.id]);
+  const external = active.filter(t => !!taskExtMap[t.id]);
+  let html = '';
+  if (internal.length) html += label('Interné', true) + internal.map(rowHtml).join('');
+  if (external.length) html += label('Externé', !internal.length) + external.map(rowHtml).join('');
   const doneNote = doneCount ? `<div style="font-size:10px;color:var(--text3);padding:4px 0">${doneCount} ukončených úloh skrytých</div>` : '';
-  return rows + doneNote;
+  return html + doneNote;
 }
 
 async function cycleCaflouTaskStatus(cislo, task_id) {
@@ -2175,8 +2191,10 @@ async function saveCaflouTaskEdit(cislo, task_id) {
   const tasks = caflouTasksCache[cislo]; if (!tasks) return;
   const t = tasks.find(x => x.id === task_id); if (!t) return;
   const key = cislo + '-' + task_id;
+  const name = document.getElementById('tn-' + key)?.value.trim();
   const uid  = document.getElementById('tu-' + key)?.value;
   const date = document.getElementById('td-' + key)?.value;
+  if (name) t.name = name;
   t.target_user_id = uid ? parseInt(uid) : null;
   t.end_time = date ? date + 'T17:00:00+02:00' : null;
   caflouTaskEditSet.delete(key);
@@ -2186,12 +2204,28 @@ async function saveCaflouTaskEdit(cislo, task_id) {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ task: {
+        ...(name ? { name } : {}),
         ...(uid ? { target_user_id: parseInt(uid) } : { target_user_id: null }),
         ...(date ? { end_time: date + 'T17:00:00+02:00' } : { end_time: null }),
       }})
     });
     showToast('Uložené ✓', 'ok');
   } catch(e) { showToast('Chyba ukladania', 'err'); }
+}
+
+async function deleteCaflouTask(cislo, task_id) {
+  if (!confirm('Vymazať úlohu?')) return;
+  const tasks = caflouTasksCache[cislo]; if (!tasks) return;
+  caflouTasksCache[cislo] = tasks.filter(t => t.id !== task_id);
+  delete taskExtMap[task_id];
+  localStorage.setItem('pmTaskExt', JSON.stringify(taskExtMap));
+  refreshUlohy(cislo);
+  try {
+    await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks/${task_id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${cfg.caflou_key}` }
+    });
+  } catch(e) {}
 }
 
 function toggleExtProf(cislo) {
@@ -2221,6 +2255,13 @@ async function createCaflouTask(cislo) {
       body: JSON.stringify(body)
     });
     if (!r.ok) throw new Error(await r.text());
+    if (isExt) {
+      try {
+        const rd = await r.json();
+        const newId = rd?.task?.id || rd?.id;
+        if (newId) { taskExtMap[newId] = true; localStorage.setItem('pmTaskExt', JSON.stringify(taskExtMap)); }
+      } catch(e) {}
+    }
     document.getElementById('uf-name-' + cislo).value = '';
     document.getElementById('uf-date-' + cislo).value = '';
     document.getElementById('uf-user-' + cislo).value = '';
@@ -2481,14 +2522,14 @@ async function geminiZhrnPortfolio() {
   const all = projects.filter(p =>
     p.faza !== 'Archív' && p.caflou_type !== 'Interná réžia'
   );
-  const lines = all.map(p => {
-    const stav = stavMap[p.cislo] || 'pripravovany';
-    const entries = (dennikMap[p.cislo] || []).slice(0, 3)
+  const lines = active.map(p => {
+    const entries = (dennikMap[p.cislo] || []).slice(0, 2)
       .map(d => '  ' + d.datum + ': ' + d.text).join('\n');
-    return `### ${p.cislo} ${p.nazov} [${p.faza}${p.podfaza?' › '+p.podfaza:''}, ${stav}]${entries ? '\n' + entries : '\n  (žiadne záznamy)'}`;
+    return `### ${p.cislo} ${p.nazov} [${p.faza}${p.podfaza?' › '+p.podfaza:''}]${entries ? '\n' + entries : '\n  (žiadne záznamy)'}`;
   }).join('\n\n');
 
-  const text = `Aktívnych projektov: ${active.length} / Celkovo: ${all.length}\n\n${lines}`;
+  const rawText = `Aktívnych projektov: ${active.length} / Celkovo: ${all.length}\n\n${lines}`;
+  const text = rawText.length > 6000 ? rawText.slice(0, 6000) + '\n…(skrátené)' : rawText;
 
   try {
     const res = await fetch(cfg.url, { method:'POST',

@@ -2600,9 +2600,12 @@ async function geminiZhrnPortfolio() {
   const rawText = `Aktívnych projektov: ${active.length} / Celkovo: ${all.length}\n\n${lines}`;
   const text = rawText.length > 6000 ? rawText.slice(0, 6000) + '\n…(skrátené)' : rawText;
 
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60000);
   try {
     const res = await fetch(cfg.url, { method:'POST',
-      body: JSON.stringify({ action:'zhrniPortfolio', text }) });
+      body: JSON.stringify({ action:'zhrniPortfolio', text }),
+      signal: ctrl.signal });
     const d = await res.json();
     if (d.ok && d.zhrnutie) {
       body.textContent = d.zhrnutie;
@@ -2610,7 +2613,11 @@ async function geminiZhrnPortfolio() {
       body.textContent = 'Chyba: ' + (d.error || 'neznáma chyba');
     }
   } catch(e) {
-    body.textContent = 'Chyba spojenia: ' + e.message;
+    body.textContent = e.name === 'AbortError'
+      ? 'Vypršal čas (60s). Apps Script trvá príliš dlho — skús znova.'
+      : 'Chyba spojenia: ' + e.message;
+  } finally {
+    clearTimeout(timer);
   }
   btn.disabled = false;
 }

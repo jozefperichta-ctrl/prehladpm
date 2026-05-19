@@ -1282,6 +1282,10 @@ const CAFLOU_USERS = {
   50219:'Jozef', 50357:'Ivan', 51092:'Soňa', 52049:'Andrea',
   52890:'Erik', 57218:'Veronika', 63559:'Lucia',
 };
+const TASK_FAZA_TAGS  = ['ŠT', 'SZ', 'DSP', 'RP', 'INŽ'];
+const TASK_FAZA_LABEL = { 'ŠT':'Štúdia', 'SZ':'Stav. zámer', 'DSP':'DSP', 'RP':'Real. projekt', 'INŽ':'Inžiniering' };
+const TASK_FAZA_COLOR = { 'ŠT':'#7c5cbf', 'SZ':'#2196F3', 'DSP':'#FF9800', 'RP':'#4CAF50', 'INŽ':'#00BCD4' };
+let caflouTaskFazaFilter = {}; // {cislo: tag|null}
 let activeStat = null;
 let stavMap   = JSON.parse(localStorage.getItem('pmStav')   || '{}');  // {cislo: 'pripravovany'|'aktivny'|'pozastaveny'}
 let dennikMap = JSON.parse(localStorage.getItem('pmDennik') || '{}');  // {cislo: [{datum, text}]}
@@ -1802,6 +1806,10 @@ function buildDetailHtml(p) {
         <input id="uf-date-${p.cislo}" type="date" class="pd-sel" style="font-size:12px">
       </div>
       <input id="uf-prof-${p.cislo}" class="dennik-input" placeholder="Profesia (napr. Statik, Elektro...)" style="font-size:13px;display:none">
+      <select id="uf-faza-${p.cislo}" class="pd-sel" style="font-size:12px">
+        <option value="">— bez typu zadania —</option>
+        ${TASK_FAZA_TAGS.map(f=>`<option value="${f}">${f} – ${TASK_FAZA_LABEL[f]}</option>`).join('')}
+      </select>
       <div style="display:flex;gap:6px">
         <button onclick="createCaflouTask('${p.cislo}')" style="flex:1;background:var(--text);color:#fff;border:none;border-radius:7px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer">Pridať</button>
         <button onclick="document.getElementById('pd-ulohy-form-${p.cislo}').style.display='none'" style="background:none;border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer">Zrušiť</button>
@@ -2118,12 +2126,30 @@ async function loadCaflouTasks(cislo, caflou_id) {
   }
 }
 
+function getTaskFazaTag(t) {
+  return (t.tags||[]).find(tag => TASK_FAZA_TAGS.includes(tag)) || null;
+}
+function setTaskFazaFilter(cislo, tag) {
+  caflouTaskFazaFilter[cislo] = caflouTaskFazaFilter[cislo] === tag ? null : tag;
+  refreshUlohy(cislo);
+}
 function buildCaflouTasksHtml(cislo) {
   const tasks = caflouTasksCache[cislo];
   if (!tasks) return '<div style="font-size:11px;color:var(--text3);padding:4px 0">Načítavam...</div>';
-  const active   = tasks.filter(t => !t.finished);
-  const doneCount = tasks.length - active.length;
-  if (!active.length && !doneCount) return '<div style="font-size:11px;color:var(--text3);padding:4px 0">Žiadne úlohy</div>';
+  const allActive = tasks.filter(t => !t.finished);
+  const doneCount = tasks.length - allActive.length;
+  if (!allActive.length && !doneCount) return '<div style="font-size:11px;color:var(--text3);padding:4px 0">Žiadne úlohy</div>';
+  const curFilter = caflouTaskFazaFilter[cislo] || null;
+  const active = curFilter ? allActive.filter(t => getTaskFazaTag(t) === curFilter) : allActive;
+  const usedTags = [...new Set(allActive.map(getTaskFazaTag).filter(Boolean))];
+  const filterHtml = usedTags.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">` +
+    usedTags.map(tag => {
+      const col = TASK_FAZA_COLOR[tag];
+      const active = curFilter === tag;
+      return `<button onclick="event.stopPropagation();setTaskFazaFilter('${cislo}','${tag}')"
+        style="font-size:10px;padding:2px 7px;border-radius:10px;cursor:pointer;font-weight:600;
+        border:1px solid ${col};color:${active?'#fff':col};background:${active?col:'transparent'}">${tag}</button>`;
+    }).join('') + `</div>` : '';
   const userOpts = `<option value="">— bez priradenia —</option>` +
     Object.entries(CAFLOU_USERS).map(([id,n]) => `<option value="${id}">${n}</option>`).join('');
   function rowHtml(t) {
@@ -2143,10 +2169,13 @@ function buildCaflouTasksHtml(cislo) {
     const safeName = t.name.replace(/"/g, '&quot;');
     const specName = extSpecOverride[String(t.id)] || (extSpecCache[cislo]||{})[t.name] || '';
     const isExt = (t.tags||[]).includes('ext');
+    const fazaTag = getTaskFazaTag(t);
     const personName = isExt ? specName : assignee;
     const personColor = specName ? 'var(--green)' : 'var(--text3)';
     const statusOpts = CAFLOU_TASK_STATUS_ORDER.map(s =>
       `<option value="${s}"${s === t.task_status_name ? ' selected' : ''}>${s}</option>`).join('');
+    const fazaOpts = `<option value="">— bez typu —</option>` +
+      TASK_FAZA_TAGS.map(f=>`<option value="${f}"${fazaTag===f?' selected':''}>${f} – ${TASK_FAZA_LABEL[f]}</option>`).join('');
     return `<div style="border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:6px;padding:5px 0 2px 0;font-size:12px">
         <span style="flex:1;font-weight:500">${t.name}</span>
@@ -2168,6 +2197,7 @@ function buildCaflouTasksHtml(cislo) {
           onclick="event.stopPropagation()"
           style="flex-shrink:0;font-size:10px;border:1px solid ${col}44;border-radius:5px;
           background:${col}22;color:${col};font-weight:600;padding:2px 4px;cursor:pointer;outline:none">${statusOpts}</select>
+        ${fazaTag ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;flex-shrink:0;color:#fff;background:${TASK_FAZA_COLOR[fazaTag]}">${fazaTag}</span>` : ''}
         ${personName ? `<span style="font-size:10px;color:${personColor};flex-shrink:0;font-weight:${specName?'500':'400'}">${personName}</span>` : ''}
         ${deadStr}
       </div>
@@ -2178,6 +2208,7 @@ function buildCaflouTasksHtml(cislo) {
           <input id="td-${editKey}" type="date" value="${curDate}" class="pd-sel" style="font-size:12px;flex:1;min-width:110px">
           <button id="ttype-${editKey}" data-ext="${isExt?'1':'0'}" onclick="event.stopPropagation();toggleTaskExtBtn('${editKey}')"
             style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--text3);white-space:nowrap">${isExt?'Externé ✓':'Interné ✓'}</button>
+          <select id="tfaza-${editKey}" class="pd-sel" style="font-size:11px;flex-shrink:0" onclick="event.stopPropagation()">${fazaOpts}</select>
           <button onclick="event.stopPropagation();saveCaflouTaskEdit('${cislo}',${t.id})"
             style="background:var(--text);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600">Uložiť</button>
         </div>
@@ -2203,9 +2234,10 @@ function buildCaflouTasksHtml(cislo) {
     `<div style="font-size:10px;font-weight:600;color:var(--text3);padding:${first?'4px':'8px'} 0 2px 0;text-transform:uppercase;letter-spacing:0.5px">${txt}</div>`;
   const internal = active.filter(t => !(t.tags || []).includes('ext'));
   const external = active.filter(t => (t.tags || []).includes('ext'));
-  let html = '';
-  if (external.length) html += label('Externé', true) + external.map(rowHtml).join('');
-  if (internal.length) html += label('Interné', !external.length) + internal.map(rowHtml).join('');
+  let html = filterHtml;
+  if (!active.length && curFilter) html += `<div style="font-size:11px;color:var(--text3);padding:4px 0">Žiadne úlohy pre filter ${curFilter}</div>`;
+  if (external.length) html += label('Externé', !filterHtml) + external.map(rowHtml).join('');
+  if (internal.length) html += label('Interné', !filterHtml && !external.length) + internal.map(rowHtml).join('');
   const doneNote = doneCount ? `<div style="font-size:10px;color:var(--text3);padding:4px 0">${doneCount} ukončených úloh skrytých</div>` : '';
   return html + doneNote;
 }
@@ -2258,6 +2290,7 @@ async function saveCaflouTaskEdit(cislo, task_id) {
   const date  = document.getElementById('td-' + key)?.value;
   const extBtn = document.getElementById('ttype-' + key);
   const newExt = extBtn?.dataset.ext === '1';
+  const fazaVal = document.getElementById('tfaza-' + key)?.value || null;
   const specEl = document.getElementById('tspec-' + key);
   if (specEl) {
     if (specEl.value) extSpecOverride[String(task_id)] = specEl.value;
@@ -2267,7 +2300,7 @@ async function saveCaflouTaskEdit(cislo, task_id) {
   if (name) t.name = name;
   t.target_user_id = uid ? parseInt(uid) : null;
   t.end_time = date ? date + 'T17:00:00+02:00' : null;
-  t.tags = newExt ? ['ext'] : [];
+  t.tags = [newExt ? 'ext' : null, fazaVal || null].filter(Boolean);
   caflouTaskEditSet.delete(key);
   refreshUlohy(cislo);
   try {
@@ -2332,16 +2365,18 @@ function toggleExtProf(cislo) {
 
 async function createCaflouTask(cislo) {
   const p = projects.find(x => x.cislo === cislo); if (!p?.caflou_id) return;
-  const name  = document.getElementById('uf-name-' + cislo)?.value.trim();
-  const uid   = document.getElementById('uf-user-' + cislo)?.value;
-  const date  = document.getElementById('uf-date-' + cislo)?.value;
-  const prof  = document.getElementById('uf-prof-' + cislo)?.value.trim();
+  const name    = document.getElementById('uf-name-' + cislo)?.value.trim();
+  const uid     = document.getElementById('uf-user-' + cislo)?.value;
+  const date    = document.getElementById('uf-date-' + cislo)?.value;
+  const prof    = document.getElementById('uf-prof-' + cislo)?.value.trim();
+  const fazaTag = document.getElementById('uf-faza-' + cislo)?.value || null;
   if (!name) { showToast('Zadaj názov úlohy', 'err'); return; }
   const isExt = uid === 'ext';
+  const tags = [isExt ? 'ext' : null, fazaTag].filter(Boolean);
   const body = { task: {
     name, project_id: p.caflou_id,
     task_status_id: CAFLOU_TASK_STATUS_IDS['Nové'],
-    ...(isExt ? { tags: ['ext'] } : {}),
+    ...(tags.length ? { tags } : {}),
     ...(!isExt && uid ? { target_user_id: parseInt(uid) } : {}),
     ...(date ? { end_time: date + 'T17:00:00+02:00' } : {}),
   }};
@@ -2357,6 +2392,8 @@ async function createCaflouTask(cislo) {
     document.getElementById('uf-user-' + cislo).value = '';
     const profEl = document.getElementById('uf-prof-' + cislo);
     if (profEl) { profEl.value = ''; profEl.style.display = 'none'; }
+    const fazaEl = document.getElementById('uf-faza-' + cislo);
+    if (fazaEl) fazaEl.value = '';
     document.getElementById('pd-ulohy-form-' + cislo).style.display = 'none';
     delete caflouTasksCache[cislo];
     await loadCaflouTasks(cislo, p.caflou_id);

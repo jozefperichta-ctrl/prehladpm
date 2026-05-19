@@ -1282,9 +1282,9 @@ const CAFLOU_USERS = {
   50219:'Jozef', 50357:'Ivan', 51092:'Soňa', 52049:'Andrea',
   52890:'Erik', 57218:'Veronika', 63559:'Lucia',
 };
-const TASK_FAZA_TAGS  = ['ŠT', 'SZ', 'DSP', 'RP', 'INŽ'];
-const TASK_FAZA_LABEL = { 'ŠT':'Štúdia', 'SZ':'Stav. zámer', 'DSP':'DSP', 'RP':'Real. projekt', 'INŽ':'Inžiniering' };
-const TASK_FAZA_COLOR = { 'ŠT':'#7c5cbf', 'SZ':'#2196F3', 'DSP':'#FF9800', 'RP':'#4CAF50', 'INŽ':'#00BCD4' };
+const TASK_FAZA_TAGS  = ['AŠ', 'SZ', 'DSP', 'PS', 'INŽ'];
+const TASK_FAZA_LABEL = { 'AŠ':'Arch. štúdia', 'SZ':'Stav. zámer', 'DSP':'DSP', 'PS':'Real. projekt', 'INŽ':'Inžiniering' };
+const TASK_FAZA_COLOR = { 'AŠ':'#7c5cbf', 'SZ':'#2196F3', 'DSP':'#FF9800', 'PS':'#4CAF50', 'INŽ':'#00BCD4' };
 let caflouTaskFazaFilter = {}; // {cislo: tag|null}
 let activeStat = null;
 let stavMap   = JSON.parse(localStorage.getItem('pmStav')   || '{}');  // {cislo: 'pripravovany'|'aktivny'|'pozastaveny'}

@@ -1722,6 +1722,8 @@ function emptyHtml(msg) {
 
 function projRowHtml(p) {
   const gem = geminiMap[p.cislo] || '';
+  const dlCls = p.deadline ? (p.dniDead < 0 ? 'red' : p.dniDead <= 14 ? 'orange' : 'muted') : '';
+  const dlStr = p.deadline ? `${p.deadline.getDate()}.${p.deadline.getMonth()+1}.` : '';
   return `<div class="prow-wrap">
     <div class="prow" onclick="toggleProjDetail('${p.cislo}',event)">
       <div class="prow-num">${p.cislo}</div>
@@ -1731,6 +1733,7 @@ function projRowHtml(p) {
           : p.podfaza  ? `<div class="prow-podfaza">${p.podfaza}</div>` : ''}
         ${gem ? `<div class="prow-gemini">${gem}</div>` : ''}
       </div>
+      <div id="pd-deadline-row-${p.cislo}" class="prow-days ${dlCls}" title="${p.deadline ? 'Termín ukončenia: '+p.deadline.getDate()+'.'+(p.deadline.getMonth()+1)+'.'+p.deadline.getFullYear() : ''}">${dlStr}</div>
       <button onclick="openEdit('${p.cislo}');event.stopPropagation();" title="Upraviť projekt"
         style="background:none;border:1px solid var(--border);border-radius:5px;
         width:28px;height:28px;cursor:pointer;font-size:14px;color:var(--text3);
@@ -1752,11 +1755,15 @@ function buildDetailHtml(p) {
   return `
   <div class="pd-section">
     <div class="pd-label">Fáza</div>
-    <div class="pd-selects">
+    <div class="pd-selects" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <select class="pd-sel" onchange="saveProjCaflouStatus('${p.cislo}',${p.caflou_id||'null'},this.value)">
         ${Object.keys(CAFLOU_STATUS_MAP).map(s=>`<option value="${s}"${p.caflou_status===s?' selected':''}>${s}</option>`).join('')}
         <option value="Archív"${p.faza==='Archív'?' selected':''}>Archív (ukončený)</option>
       </select>
+      <input type="date" class="pd-sel" style="font-size:12px;max-width:130px;"
+        value="${p.deadline ? p.deadline.toISOString().split('T')[0] : ''}"
+        onchange="saveProjDeadline('${p.cislo}',${p.caflou_id||'null'},this.value)"
+        onclick="event.stopPropagation()" title="Termín ukončenia">
     </div>
   </div>
   <div class="pd-section">
@@ -1891,6 +1898,20 @@ async function saveProjStav(cislo, val) {
     } catch(e) { showToast('Chyba: ' + e.message, 'err'); }
   }
   renderProjects();
+}
+
+async function saveProjDeadline(cislo, caflou_id, val) {
+  const p = projects.find(x => x.cislo === cislo); if (!p) return;
+  const r = await caflouPatch(caflou_id, { end_date: val || null });
+  if (!r || !r.ok) { showToast('Chyba uloženia termínu', 'err'); return; }
+  const t = new Date();
+  p.deadline = val ? new Date(val) : null;
+  p.dniDead  = p.deadline ? Math.floor((p.deadline - t) / 86400000) : null;
+  const cls  = p.deadline ? (p.dniDead < 0 ? 'red' : p.dniDead <= 14 ? 'orange' : 'muted') : '';
+  const str  = p.deadline ? `${p.deadline.getDate()}.${p.deadline.getMonth()+1}.` : '';
+  const el   = document.getElementById(`pd-deadline-row-${cislo}`);
+  if (el) { el.className = `prow-days ${cls}`; el.textContent = str; el.title = p.deadline ? `Termín ukončenia: ${p.deadline.getDate()}.${p.deadline.getMonth()+1}.${p.deadline.getFullYear()}` : ''; }
+  showToast('Termín uložený ✓', 'ok');
 }
 
 // ── TASKS HTML ────────────────────────────────────────────────────────────

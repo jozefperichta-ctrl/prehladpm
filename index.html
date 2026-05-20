@@ -1435,10 +1435,10 @@ async function openVytazenieModal() {
   try {
     const workload = {}; // specName → [{taskName, projectName, cislo, status, faza}]
 
-    // 1. Primary source: Supabase selected invitations
+    // 1. Primary source: Supabase invitations (sent/viewed/submitted/selected = aktívni)
     const { data: invs } = await sb.from('invitations')
-      .select('specialist_id, requests!inner(notes, project_cislo)')
-      .eq('status', 'selected');
+      .select('specialist_id, status, requests!inner(notes, project_cislo)')
+      .neq('status', 'rejected');
     const specIds = [...new Set((invs||[]).map(i => i.specialist_id))];
     const { data: specs } = specIds.length
       ? await sb.from('specialists').select('id,name').in('id', specIds)
@@ -1458,7 +1458,7 @@ async function openVytazenieModal() {
         if (t) taskStatus = t.task_status_name || '—';
       }
       if (!workload[specName]) workload[specName] = [];
-      workload[specName].push({ taskName, projectName: proj.nazov, cislo, status: taskStatus, faza: proj.faza });
+      workload[specName].push({ taskName, projectName: proj.nazov, cislo, status: taskStatus, invStatus: inv.status, faza: proj.faza });
     });
 
     // 2. Secondary: extSpecOverride from already-cached task data
@@ -1483,13 +1483,18 @@ async function openVytazenieModal() {
       el.innerHTML = _vytazenieCache; return;
     }
     const TASK_STATUS_COL = { 'Hotové':'var(--green)', 'V riešení':'var(--blue)', 'Nová':'var(--text3)' };
+    const INV_STATUS_COL = { 'selected':'var(--green)', 'submitted':'var(--blue)', 'viewed':'var(--text3)', 'sent':'var(--text3)' };
+    const INV_STATUS_LBL = { 'selected':'vybraný', 'submitted':'cena odoslaná', 'viewed':'pozrel', 'sent':'pozvaný' };
     _vytazenieCache = sorted.map(([specName, items]) => {
       const rows = items.map(item => {
-        const col = TASK_STATUS_COL[item.status] || 'var(--text3)';
+        const showStatus = item.status !== '—' ? item.status : null;
+        const showInv = item.invStatus ? INV_STATUS_LBL[item.invStatus] || item.invStatus : null;
+        const badgeText = showStatus || showInv || '—';
+        const col = showStatus ? (TASK_STATUS_COL[item.status] || 'var(--text3)') : (INV_STATUS_COL[item.invStatus] || 'var(--text3)');
         return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--border)44;font-size:12px">
           <span style="flex:1;color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.cislo} – ${item.projectName}</span>
           <span style="color:var(--text3);font-size:11px;flex-shrink:0;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.taskName}</span>
-          <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${col}22;color:${col};flex-shrink:0;font-weight:600">${item.status}</span>
+          <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${col}22;color:${col};flex-shrink:0;font-weight:600">${badgeText}</span>
         </div>`;
       }).join('');
       return `<div style="margin-bottom:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2)">

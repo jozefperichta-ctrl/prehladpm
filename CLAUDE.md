@@ -164,7 +164,7 @@ CAFLOU_USERS             // user_id → meno
 - Trigger `sledujMaily` — time-driven, každú hodinu; hľadá `newer_than:1d label:inbox`
 - `oauthScopes` v `appsscript.json` musí obsahovať `https://mail.google.com/`
 - `doPost` **musí mať try-catch** okolo celého tela — inak nekachnutý exception vráti HTML bez CORS hlavičiek → prehliadač dostane "Failed to fetch"
-- Gemini model: `gemini-2.0-flash` (nie `gemini-2.5-flash` — nižšia kvóta na free tier)
+- Gemini model: `gemini-2.5-flash` — `volajGemini` aj `analyzovatGemini` používajú tento model. `gemini-2.0-flash` a `gemini-2.0-flash-lite` majú `limit: 0` na free tier (nefungujú)
 - `akcia_zhrniPortfolio` **nepoužíva SYSTEM_PROMPT** ani SHEET_MAILY — prompt by bol príliš dlhý (429). Používa vlastný krátky prompt, max 4000 znakov
 - Frontend `geminiZhrnPortfolio` posiela len aktívne projekty **so zápismi**, 1 najnovší záznam/projekt, max 3000 znakov; fetch má AbortController timeout 60s
 - `volajGemini` retry sleep: 5s (nie 30s) — rýchlejšie zlyhanie pri rate limite; po 3 pokusoch hodí zrozumiteľnú správu

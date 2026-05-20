@@ -1309,8 +1309,7 @@ let caflouTaskSelected = {};   // {cislo: Set<task_id>}
 let taskTemplates = null;      // [{id, name, tasks}] — loaded once from Supabase
 let _tmplLoading = false;
 const taskNotesCache = {};     // {task_id: [{id,datum,text,created_at}]} — loaded on first open
-const taskNotesOpen = new Set();    // task_ids with notes section expanded
-const taskNotesShowAll = new Set(); // task_ids showing all (not just last) notes
+const taskNotesOpen = new Set();
 let _tmplEditId = null;
 let _tmplEditName = '';
 let _tmplEditTasks = [];
@@ -2175,17 +2174,6 @@ async function loadCaflouTasks(cislo, caflou_id) {
         } else { extSpecCache[cislo] = {}; }
       }
     } catch(e) {}
-    // Eagerly load notes for all active ext tasks
-    try {
-      const extIds = all.filter(t => !t.finished && (t.tags||[]).includes('ext')).map(t => t.id);
-      if (extIds.length) {
-        const { data: notes } = await sb.from('task_notes').select('*')
-          .in('task_id', extIds).order('created_at', { ascending: false });
-        const grouped = {};
-        (notes||[]).forEach(n => { if (!grouped[n.task_id]) grouped[n.task_id]=[]; grouped[n.task_id].push(n); });
-        extIds.forEach(id => { taskNotesCache[id] = grouped[id] || []; });
-      }
-    } catch(e) {}
     el.innerHTML = buildCaflouTasksHtml(cislo);
   } catch(e) {
     el.innerHTML = `<div style="font-size:11px;color:var(--red);padding:4px 0">Chyba: ${e.message}</div>`;
@@ -2374,15 +2362,13 @@ function buildCaflouTasksHtml(cislo) {
           width:22px;height:22px;cursor:pointer;font-size:12px;color:var(--red);
           display:flex;align-items:center;justify-content:center">✕</button>`;
     const notesOpen = isExt && taskNotesOpen.has(t.id);
-    const cachedNotes = taskNotesCache[t.id] || [];
-    const lastNote = isExt ? cachedNotes[0] : null;
     return `<div style="border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:6px;padding:5px 0 2px 0;font-size:12px">
         ${checkboxHtml}
         <span style="flex:1;font-weight:500">${t.name}</span>
         ${actionBtns}
       </div>
-      <div style="display:flex;align-items:center;gap:6px;padding:2px 0 ${isExt?'2':'5'}px 0;${selectMode?'padding-left:21px':''};min-width:0">
+      <div style="display:flex;align-items:center;gap:6px;padding:2px 0 5px 0;${selectMode?'padding-left:21px':''}">
         <select onchange="event.stopPropagation();setCaflouTaskStatus('${cislo}',${t.id},this.value)"
           onclick="event.stopPropagation()"
           style="flex-shrink:0;font-size:10px;border:1px solid ${col}44;border-radius:5px;
@@ -2390,8 +2376,7 @@ function buildCaflouTasksHtml(cislo) {
         ${fazaTag ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;flex-shrink:0;color:#fff;background:${TASK_FAZA_COLOR[fazaTag]}">${fazaTag}</span>` : ''}
         ${personName ? `<span style="font-size:10px;color:${personColor};flex-shrink:0;font-weight:${specName?'500':'400'}">${personName}</span>` : ''}
         ${deadStr}
-        ${lastNote ? `<span style="flex:1;font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;cursor:pointer" onclick="event.stopPropagation();toggleTaskNotes('${cislo}',${t.id})">${lastNote.datum}: ${lastNote.text}</span>` : (isExt ? `<span style="flex:1"></span>` : '')}
-        ${isExt ? `<button onclick="event.stopPropagation();toggleTaskNotes('${cislo}',${t.id})" title="Zápisky" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0;flex-shrink:0">${notesOpen?'▲':'📝'}</button>` : ''}
+        ${isExt ? `<button onclick="event.stopPropagation();toggleTaskNotes('${cislo}',${t.id})" title="Zápisky" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0 0 0 4px;flex-shrink:0">${notesOpen?'▲':'📝'}</button>` : ''}
       </div>
       ${isExt && notesOpen ? `<div onclick="event.stopPropagation()" style="padding:0 0 5px 0">${buildTaskNotesHtml(cislo, t.id)}</div>` : ''}
       <div id="te-${editKey}" style="display:${editOpen?'flex':'none'};gap:6px;padding:4px 0 8px 0;flex-direction:column" onclick="event.stopPropagation()">
@@ -2818,17 +2803,17 @@ async function applyTmplTasks(cislo) {
 function buildTaskNotesHtml(cislo, taskId) {
   const notes = taskNotesCache[taskId];
   if (notes === undefined) return '<div style="font-size:11px;color:var(--text3);padding:4px 0">Načítavam…</div>';
-  // notes[0] is shown inline in row 2; show older entries (index 1+) here
-  const older = notes.slice(1);
   let html = '<div style="margin-top:2px">';
-  if (older.length) {
-    html += older.map(n => `
+  if (notes.length) {
+    html += notes.map(n => `
       <div style="font-size:11px;padding:3px 0;border-top:1px solid var(--border)44;display:flex;gap:6px;align-items:baseline">
         <span style="color:var(--text3);flex-shrink:0;font-size:10px">${n.datum}</span>
         <span style="color:var(--text2);flex:1">${n.text}</span>
       </div>`).join('');
+  } else {
+    html += '<div style="font-size:11px;color:var(--text3);padding:3px 0;font-style:italic">Žiadne zápisky</div>';
   }
-  html += `<div style="display:flex;gap:4px;margin-top:4px">
+  html += `<div style="display:flex;gap:4px;margin-top:6px">
     <input id="tni-${taskId}" class="dennik-input" placeholder="Nový záznam…"
       style="flex:1;font-size:11px" onkeydown="if(event.key==='Enter'){event.stopPropagation();addTaskNote('${cislo}',${taskId})}">
     <button onclick="event.stopPropagation();addTaskNote('${cislo}',${taskId})"
@@ -2849,10 +2834,23 @@ async function toggleTaskNotes(cislo, taskId) {
     taskNotesCache[taskId] = undefined; // mark as loading
     refreshUlohy(cislo);
     try {
-      const { data, error } = await sb.from('task_notes').select('*')
-        .eq('task_id', taskId).order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      taskNotesCache[taskId] = data || [];
+      const r = await fetch(
+        `https://app.caflou.com/api/v1/${cfg.caflou_id}/comments?commented_type=Task&commented_id=${taskId}&per=100`,
+        { headers: { Authorization: `Bearer ${cfg.caflou_key}` } }
+      );
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      const all = d.result || d.results || d.data || [];
+      taskNotesCache[taskId] = all
+        .filter(c => String(c.commented_id) === String(taskId))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .map(c => {
+          const raw = c.text || '';
+          const m = raw.match(/^(\d+\.\d+\.\d+): ([\s\S]+)$/);
+          if (m) return { id: c.id, datum: m[1], text: m[2] };
+          const dt = new Date(c.created_at);
+          return { id: c.id, datum: dt.getDate()+'.'+(dt.getMonth()+1)+'.'+dt.getFullYear(), text: raw };
+        });
     } catch(e) {
       taskNotesCache[taskId] = [];
       showToast('Chyba načítania zápiskov: ' + e.message, 'err');
@@ -2869,23 +2867,22 @@ async function addTaskNote(cislo, taskId) {
   inp.value = '';
   inp.disabled = true;
   try {
-    const { data, error } = await sb.from('task_notes').insert({ task_id: taskId, datum, text }).select().single();
-    if (error) throw new Error(error.message);
+    const r = await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/comments`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment: { text: datum + ': ' + text, commented_type: 'Task', commented_id: taskId } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const newNote = { id: d.result?.id ?? d.id, datum, text };
     if (!taskNotesCache[taskId]) taskNotesCache[taskId] = [];
-    taskNotesCache[taskId].unshift(data);
-    refreshUlohy(cislo);
-    // Backup: post to Caflou task comment so team sees it in Caflou
-    if (cfg.caflou_key && cfg.caflou_id) {
-      fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/comments`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comment: { text: datum + ': ' + text, commented_type: 'Task', commented_id: taskId } })
-      }).catch(() => {});
-    }
+    taskNotesCache[taskId].unshift(newNote);
   } catch(e) {
     showToast('Chyba: ' + e.message, 'err');
-    inp.disabled = false;
+  } finally {
+    if (inp) inp.disabled = false;
   }
+  refreshUlohy(cislo);
 }
 
 function toggleNewTaskExt(cislo) {
@@ -2979,7 +2976,7 @@ function toggleProjDetail(cislo, e) {
     caflouTaskSelectMode[cislo] = false;
     caflouTaskSelected[cislo] = new Set();
     const tasks = caflouTasksCache[cislo] || [];
-    tasks.forEach(t => { taskNotesOpen.delete(t.id); taskNotesShowAll.delete(t.id); });
+    tasks.forEach(t => { taskNotesOpen.delete(t.id); delete taskNotesCache[t.id]; });
   }
 }
 
@@ -3196,27 +3193,15 @@ async function geminiZhrnProjekt(cislo) {
   const entries = (dennikMap[cislo] || []).slice(0, 8)
     .map(d => d.datum + ': ' + d.text).join('\n');
 
-  // Fetch task notes for external tasks
   let taskNotesText = '';
-  try {
-    const extTasks = (caflouTasksCache[cislo]||[]).filter(t => !t.finished && (t.tags||[]).includes('ext'));
-    if (extTasks.length) {
-      const uncachedIds = extTasks.filter(t => taskNotesCache[t.id] === undefined).map(t => t.id);
-      if (uncachedIds.length) {
-        const { data } = await sb.from('task_notes').select('*')
-          .in('task_id', uncachedIds).order('created_at', { ascending: false });
-        const grouped = {};
-        (data||[]).forEach(n => { if (!grouped[n.task_id]) grouped[n.task_id]=[]; grouped[n.task_id].push(n); });
-        uncachedIds.forEach(id => { taskNotesCache[id] = grouped[id] || []; });
-      }
-      const lines = [];
-      extTasks.forEach(t => {
-        const notes = (taskNotesCache[t.id]||[]).slice(0, 3);
-        notes.forEach(n => lines.push(`[${t.name}] ${n.datum}: ${n.text}`));
-      });
-      if (lines.length) taskNotesText = '\n\nZápisky k externým úlohám:\n' + lines.join('\n');
-    }
-  } catch(e) {}
+  const extTasks = (caflouTasksCache[cislo]||[]).filter(t => !t.finished && (t.tags||[]).includes('ext'));
+  if (extTasks.length) {
+    const lines = [];
+    extTasks.forEach(t => {
+      (taskNotesCache[t.id]||[]).slice(0, 3).forEach(n => lines.push(`[${t.name}] ${n.datum}: ${n.text}`));
+    });
+    if (lines.length) taskNotesText = '\n\nZápisky k externým úlohám:\n' + lines.join('\n');
+  }
 
   const text = (entries + taskNotesText) || p.opisAkcie || p.nazov;
 

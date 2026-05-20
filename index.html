@@ -1324,6 +1324,7 @@ const caflouTaskEditSet = new Set();
 const extSpecCache = {}; // {cislo: {taskName: specialistName}}
 const extSpecOverride = JSON.parse(localStorage.getItem('pmExtSpecOverride') || '{}'); // {task_id: specialistName}
 let specialistsList = null;
+let caflouContactsCache = null; // {email_lower: company_id}
 
 // ── CAFLOU STATUS MAP ─────────────────────────────────────────────────────
 const CAFLOU_STATUS_MAP = {
@@ -2517,6 +2518,7 @@ async function saveCaflouTaskEdit(cislo, task_id) {
     if (specEl.value) extSpecOverride[String(task_id)] = specEl.value;
     else delete extSpecOverride[String(task_id)];
     localStorage.setItem('pmExtSpecOverride', JSON.stringify(extSpecOverride));
+    if (newExt && specEl.value) linkSpecialistToProject(cislo, specEl.value).catch(() => {});
   }
   if (name) t.name = name;
   t.target_user_id = uid ? parseInt(uid) : null;
@@ -2566,9 +2568,47 @@ async function deleteCaflouTask(cislo, task_id) {
 async function loadSpecialists() {
   if (specialistsList !== null) return;
   try {
-    const { data } = await sb.from('specialists').select('id,name,profession').order('name');
+    const { data } = await sb.from('specialists').select('id,name,profession,email').order('name');
     specialistsList = data || [];
   } catch(e) { specialistsList = []; }
+}
+
+async function loadCaflouContacts() {
+  if (caflouContactsCache !== null) return;
+  caflouContactsCache = {};
+  if (!cfg.caflou_key || !cfg.caflou_id) return;
+  try {
+    let page = 1, hasMore = true;
+    while (hasMore) {
+      const r = await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/contacts?per=100&page=${page}`,
+        { headers: { Authorization: `Bearer ${cfg.caflou_key}` } });
+      const d = await r.json();
+      (d.results || []).forEach(c => {
+        if (c.email && c.company_id) caflouContactsCache[c.email.toLowerCase()] = c.company_id;
+      });
+      hasMore = !!d.next_page;
+      page++;
+    }
+  } catch(e) {}
+}
+
+async function linkSpecialistToProject(cislo, specName) {
+  const p = projects.find(x => x.cislo === cislo); if (!p?.caflou_id) return;
+  const spec = (specialistsList || []).find(s => s.name === specName); if (!spec?.email) return;
+  await loadCaflouContacts();
+  const companyId = caflouContactsCache[spec.email.toLowerCase()]; if (!companyId) return;
+  try {
+    const rp = await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/projects/${p.caflou_id}`,
+      { headers: { Authorization: `Bearer ${cfg.caflou_key}` } });
+    const dp = await rp.json();
+    const existing = dp.company_ids || [];
+    if (existing.includes(companyId)) return;
+    await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/projects/${p.caflou_id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project: { company_ids: [...existing, companyId] } })
+    });
+  } catch(e) {}
 }
 
 function filterSpecDropdown(editKey) {

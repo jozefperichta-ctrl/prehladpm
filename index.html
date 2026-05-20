@@ -2209,6 +2209,26 @@ async function bulkSetFaza(cislo, tag) {
     }).catch(() => {});
   }));
 }
+async function bulkSetExtInt(cislo, isExt) {
+  const selSet = caflouTaskSelected[cislo]; if (!selSet?.size) return;
+  const tasks = caflouTasksCache[cislo]; if (!tasks) return;
+  const ids = [...selSet];
+  ids.forEach(id => {
+    const t = tasks.find(x => x.id === id); if (!t) return;
+    const fazaTag = getTaskFazaTag(t);
+    t.tags = [isExt ? 'ext' : null, fazaTag || null].filter(Boolean);
+  });
+  refreshUlohy(cislo);
+  const p = projects.find(x => x.cislo === cislo); if (!p?.caflou_id) return;
+  await Promise.all(ids.map(id => {
+    const t = tasks.find(x => x.id === id); if (!t) return Promise.resolve();
+    return fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: { tags: t.tags } })
+    }).catch(() => {});
+  }));
+}
 async function bulkFinishTasks(cislo) {
   const selSet = caflouTaskSelected[cislo]; if (!selSet?.size) return;
   if (!confirm(`Ukončiť ${selSet.size} označených úloh?`)) return;
@@ -2375,6 +2395,12 @@ function buildCaflouTasksHtml(cislo) {
       <select onchange="event.stopPropagation();if(this.value){bulkSetFaza('${cislo}',this.value);this.value=''}"
         onclick="event.stopPropagation()" ${selCount===0?'disabled':''}
         style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:2px 4px;background:var(--bg2);color:var(--text2);cursor:pointer">${bulkFazaOpts}</select>
+      <button onclick="event.stopPropagation();bulkSetExtInt('${cislo}',false)" ${selCount===0?'disabled':''}
+        style="font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--text3);${selCount===0?'opacity:0.4':''}">
+        Interné</button>
+      <button onclick="event.stopPropagation();bulkSetExtInt('${cislo}',true)" ${selCount===0?'disabled':''}
+        style="font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--green)88;background:none;color:var(--green);${selCount===0?'opacity:0.4':''}">
+        Externé</button>
       <button onclick="event.stopPropagation();bulkFinishTasks('${cislo}')" ${selCount===0?'disabled':''}
         style="font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--text3);${selCount===0?'opacity:0.4':''}">
         ✓ Ukončiť</button>

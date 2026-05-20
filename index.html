@@ -2978,27 +2978,8 @@ async function createCaflouTask(cislo) {
     document.getElementById('pd-ulohy-form-' + cislo).style.display = 'none';
     delete caflouTasksCache[cislo];
     await loadCaflouTasks(cislo, p.caflou_id);
-    if (isExt) {
-      await createDopytFromTask(p, name, prof);
-    } else {
-      showToast('Úloha pridaná ✓', 'ok');
-    }
+    showToast('Úloha pridaná ✓', 'ok');
   } catch(e) { showToast('Chyba: ' + e.message, 'err'); }
-}
-
-async function createDopytFromTask(p, taskName, profession) {
-  try {
-    const { error } = await sb.from('requests').insert({
-      project_cislo: p.cislo,
-      project_name:  p.nazov,
-      profession:    profession || '',
-      phases:        [],
-      notes:         taskName,
-      status:        'active',
-    });
-    if (error) throw new Error(error.message);
-    showToast('Úloha + dopyt vytvorené ✓ — otvorte Ponuky', 'ok');
-  } catch(e) { showToast('Úloha pridaná, dopyt sa nepodarilo: ' + e.message, 'err'); }
 }
 
 function toggleProjDetail(cislo, e) {

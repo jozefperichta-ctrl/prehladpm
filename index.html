@@ -2761,18 +2761,27 @@ async function applyTmplTasks(cislo) {
   const p = projects.find(x => x.cislo === cislo); if (!p?.caflou_id) return;
   document.getElementById('pd-tmpl-' + cislo).style.display = 'none';
   showToast('Vytváram úlohy…', 'ok');
+  const newIds = [];
   for (const task of selectedTasks) {
-    await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: {
-        name: task.name,
-        task_status_id: CAFLOU_TASK_STATUS_IDS['Nové'],
-        project_id: p.caflou_id,
-        tags: [task.ext ? 'ext' : null, task.faza || null].filter(Boolean),
-      }})
-    }).catch(() => {});
+    try {
+      const r = await fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: {
+          name: task.name,
+          task_status_id: CAFLOU_TASK_STATUS_IDS['Nové'],
+          project_id: p.caflou_id,
+          tags: [task.ext ? 'ext' : null, task.faza || null].filter(Boolean),
+        }})
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const id = d.result?.id ?? d.id;
+        if (id) newIds.push(id);
+      }
+    } catch(e) {}
   }
+  if (newIds.length) p.caflou_task_ids = [...(p.caflou_task_ids || []), ...newIds];
   delete caflouTasksCache[cislo];
   await loadCaflouTasks(cislo, p.caflou_id);
   showToast(`${selectedTasks.length} úloh načítaných ✓`, 'ok');
@@ -2808,6 +2817,9 @@ async function createCaflouTask(cislo) {
       body: JSON.stringify(body)
     });
     if (!r.ok) throw new Error(await r.text());
+    const rd = await r.json();
+    const newId = rd.result?.id ?? rd.id;
+    if (newId) p.caflou_task_ids = [...(p.caflou_task_ids || []), newId];
     document.getElementById('uf-name-' + cislo).value = '';
     document.getElementById('uf-date-' + cislo).value = '';
     document.getElementById('uf-user-' + cislo).value = '';

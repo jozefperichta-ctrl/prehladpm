@@ -757,7 +757,7 @@ async function doInvite() {
 
     const toUpsert = sel.map(cb => {
       const c = contacts.find(x => x.email === cb.dataset.email);
-      return { email: c.email, name: c.name, company: c.company || '', profession: (c.labels || [])[0] || '', phone: c.phone || '' };
+      return { email: c.email, name: c.name, company: c.company || '', profession: (c.labels || []).join(', '), phone: c.phone || '' };
     });
     const { data: upserted, error: upsErr } = await sb.from('specialists')
       .upsert(toUpsert, { onConflict: 'email' }).select('id, email');

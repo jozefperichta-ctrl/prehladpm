@@ -3191,7 +3191,30 @@ async function geminiZhrnProjekt(cislo) {
 
   const entries = (dennikMap[cislo] || []).slice(0, 8)
     .map(d => d.datum + ': ' + d.text).join('\n');
-  const text = entries || p.opisAkcie || p.nazov;
+
+  // Fetch task notes for external tasks
+  let taskNotesText = '';
+  try {
+    const extTasks = (caflouTasksCache[cislo]||[]).filter(t => !t.finished && (t.tags||[]).includes('ext'));
+    if (extTasks.length) {
+      const uncachedIds = extTasks.filter(t => taskNotesCache[t.id] === undefined).map(t => t.id);
+      if (uncachedIds.length) {
+        const { data } = await sb.from('task_notes').select('*')
+          .in('task_id', uncachedIds).order('created_at', { ascending: false });
+        const grouped = {};
+        (data||[]).forEach(n => { if (!grouped[n.task_id]) grouped[n.task_id]=[]; grouped[n.task_id].push(n); });
+        uncachedIds.forEach(id => { taskNotesCache[id] = grouped[id] || []; });
+      }
+      const lines = [];
+      extTasks.forEach(t => {
+        const notes = (taskNotesCache[t.id]||[]).slice(0, 3);
+        notes.forEach(n => lines.push(`[${t.name}] ${n.datum}: ${n.text}`));
+      });
+      if (lines.length) taskNotesText = '\n\nZápisky k externým úlohám:\n' + lines.join('\n');
+    }
+  } catch(e) {}
+
+  const text = (entries + taskNotesText) || p.opisAkcie || p.nazov;
 
   try {
     const ctrl = new AbortController();

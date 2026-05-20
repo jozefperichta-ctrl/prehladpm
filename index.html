@@ -1832,14 +1832,15 @@ function buildDetailHtml(p) {
     <div id="pd-ulohy-${p.cislo}"><div style="font-size:11px;color:var(--text3);padding:4px 0">Načítavam...</div></div>
     <div id="pd-ulohy-form-${p.cislo}" style="display:none;margin-top:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;gap:6px;display:none;flex-direction:column">
       <input id="uf-name-${p.cislo}" class="dennik-input" placeholder="Názov úlohy" style="font-size:13px">
-      <div style="display:flex;gap:6px">
-        <select id="uf-user-${p.cislo}" class="pd-sel" style="flex:1;font-size:12px" onchange="toggleExtProf('${p.cislo}')">
-          <option value="">— kto —</option>
-          ${Object.entries(CAFLOU_USERS).map(([id,n])=>`<option value="${id}">${n}</option>`).join('')}
-          <option value="ext">— externý profesista —</option>
-        </select>
-        <input id="uf-date-${p.cislo}" type="date" class="pd-sel" style="font-size:12px">
+      <div style="display:flex;gap:6px;align-items:center">
+        <button id="uf-ext-btn-${p.cislo}" data-ext="0" onclick="toggleNewTaskExt('${p.cislo}')"
+          style="font-size:11px;padding:2px 9px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;white-space:nowrap;flex-shrink:0">Interné ✓</button>
+        <input id="uf-date-${p.cislo}" type="date" class="pd-sel" style="font-size:12px;flex:1">
       </div>
+      <select id="uf-user-${p.cislo}" class="pd-sel" style="font-size:12px">
+        <option value="">— kto —</option>
+        ${Object.entries(CAFLOU_USERS).map(([id,n])=>`<option value="${id}">${n}</option>`).join('')}
+      </select>
       <input id="uf-prof-${p.cislo}" class="dennik-input" placeholder="Profesia (napr. Statik, Elektro...)" style="font-size:13px;display:none">
       <select id="uf-faza-${p.cislo}" class="pd-sel" style="font-size:12px">
         <option value="">— bez typu zadania —</option>
@@ -2793,27 +2794,34 @@ async function applyTmplTasks(cislo) {
   showToast(`${selectedTasks.length} úloh načítaných ✓`, 'ok');
 }
 
-function toggleExtProf(cislo) {
-  const uid = document.getElementById('uf-user-' + cislo)?.value;
+function toggleNewTaskExt(cislo) {
+  const btn = document.getElementById('uf-ext-btn-' + cislo); if (!btn) return;
+  const nowExt = btn.dataset.ext !== '1';
+  btn.dataset.ext = nowExt ? '1' : '0';
+  btn.textContent = nowExt ? 'Externé ✓' : 'Interné ✓';
+  btn.style.color = nowExt ? 'var(--green)' : 'var(--text3)';
+  btn.style.borderColor = nowExt ? 'var(--green)' : 'var(--border)';
+  document.getElementById('uf-user-' + cislo).style.display = nowExt ? 'none' : '';
   const profEl = document.getElementById('uf-prof-' + cislo);
-  if (profEl) profEl.style.display = uid === 'ext' ? '' : 'none';
+  if (profEl) profEl.style.display = nowExt ? '' : 'none';
 }
 
 async function createCaflouTask(cislo) {
   const p = projects.find(x => x.cislo === cislo); if (!p?.caflou_id) return;
   const name    = document.getElementById('uf-name-' + cislo)?.value.trim();
-  const uid     = document.getElementById('uf-user-' + cislo)?.value;
+  const extBtn  = document.getElementById('uf-ext-btn-' + cislo);
+  const isExt   = extBtn?.dataset.ext === '1';
+  const uid     = isExt ? null : (document.getElementById('uf-user-' + cislo)?.value || null);
   const date    = document.getElementById('uf-date-' + cislo)?.value;
   const prof    = document.getElementById('uf-prof-' + cislo)?.value.trim();
   const fazaTag = document.getElementById('uf-faza-' + cislo)?.value || null;
   if (!name) { showToast('Zadaj názov úlohy', 'err'); return; }
-  const isExt = uid === 'ext';
   const tags = [isExt ? 'ext' : null, fazaTag].filter(Boolean);
   const body = { task: {
     name, project_id: p.caflou_id,
     task_status_id: CAFLOU_TASK_STATUS_IDS['Nové'],
     ...(tags.length ? { tags } : {}),
-    ...(!isExt && uid ? { target_user_id: parseInt(uid) } : {}),
+    ...(uid ? { target_user_id: parseInt(uid) } : {}),
     ...(date ? { end_time: date + 'T17:00:00+02:00' } : {}),
   }};
   try {
@@ -2829,6 +2837,9 @@ async function createCaflouTask(cislo) {
     document.getElementById('uf-name-' + cislo).value = '';
     document.getElementById('uf-date-' + cislo).value = '';
     document.getElementById('uf-user-' + cislo).value = '';
+    // reset ext toggle to Interné
+    if (extBtn) { extBtn.dataset.ext = '0'; extBtn.textContent = 'Interné ✓'; extBtn.style.color = 'var(--text3)'; extBtn.style.borderColor = 'var(--border)'; }
+    document.getElementById('uf-user-' + cislo).style.display = '';
     const profEl = document.getElementById('uf-prof-' + cislo);
     if (profEl) { profEl.value = ''; profEl.style.display = 'none'; }
     const fazaEl = document.getElementById('uf-faza-' + cislo);

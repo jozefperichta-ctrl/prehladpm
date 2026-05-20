@@ -1346,12 +1346,12 @@ function goTab(name) {
   ['Studia','Projekcia','Inziniering','Archiv'].forEach(n => {
     document.getElementById('nt'+n).classList.toggle('active', n === name);
   });
-  // Prehled section is always active (used for all 4 tabs)
   document.getElementById('secPrehled').classList.add('active');
-  // Show/hide stav toggle
-  document.getElementById('stavTabs').style.display = (name === 'Archiv') ? 'none' : 'flex';
-  document.getElementById('btnGemini').style.display = (name === 'Archiv') ? 'none' : 'flex';
-  renderProjects();
+  const isArchiv = name === 'Archiv';
+  document.getElementById('stavTabs').style.display = isArchiv ? 'none' : 'flex';
+  document.getElementById('btnGemini').style.display = isArchiv ? 'none' : 'flex';
+  if (!isArchiv) setStavFilter('aktivny');
+  else renderProjects();
 }
 
 function setStavFilter(s) {

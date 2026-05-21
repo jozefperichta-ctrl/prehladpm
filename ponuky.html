@@ -842,7 +842,11 @@ function renderSpecialists() {
             <strong>${c.name}</strong>${c.company ? ` <span style="color:var(--text2)">· ${c.company}</span>` : ''}
             <br><span style="font-size:12px;color:var(--text2)">${c.email}${c.phone ? ' · ' + c.phone : ''}</span>
           </div>
-          ${portalUrl ? `<button class="btn btn-g btn-sm" title="${portalUrl}" onclick="copyTxt('${portalUrl}');showToast('Link skopírovaný')">🔗 Portál</button>` : ''}
+          ${sp
+            ? portalUrl
+              ? `<button class="btn btn-g btn-sm" title="${portalUrl}" onclick="copyTxt('${portalUrl}');showToast('Link skopírovaný')">🔗 Portál</button>`
+              : `<button class="btn btn-g btn-sm" onclick="generatePortalToken('${sp.id}')">🔗 Vytvoriť portál</button>`
+            : ''}
           ${sp
             ? `<button class="btn btn-g btn-sm" onclick="openSpecModal('${sp.id}')">Upraviť</button>`
             : `<button class="btn btn-g btn-sm" onclick="addKontakt('${c.email.replace(/'/g,"\\'")}')">Pridať</button>`}
@@ -861,7 +865,9 @@ function renderSpecialists() {
         ${s.profession ? `<span class="badge b-sent" style="margin-left:6px">${s.profession}</span>` : ''}
         <br><span style="font-size:12px;color:var(--text2)">${s.email}${s.phone ? ' · ' + s.phone : ''}</span>
       </div>
-      ${portalUrl ? `<button class="btn btn-g btn-sm" title="${portalUrl}" onclick="copyTxt('${portalUrl}');showToast('Link skopírovaný')">🔗 Portál</button>` : ''}
+      ${portalUrl
+        ? `<button class="btn btn-g btn-sm" title="${portalUrl}" onclick="copyTxt('${portalUrl}');showToast('Link skopírovaný')">🔗 Portál</button>`
+        : `<button class="btn btn-g btn-sm" onclick="generatePortalToken('${s.id}')">🔗 Vytvoriť portál</button>`}
       <button class="btn btn-g btn-sm" onclick="openSpecModal('${s.id}')">Upraviť</button>
       <button class="btn btn-sm" onclick="deleteSpec('${s.id}')" style="color:var(--red);border-color:var(--red-bd);background:var(--red-bg)">×</button>
     </div>`;
@@ -918,6 +924,19 @@ async function saveSpec() {
   showToast(editSpecId ? 'Profesista upravený' : 'Profesista pridaný', 'ok');
   _loading = false;
   await loadAll();
+}
+
+// ── PORTAL TOKEN ─────────────────────────────────────────────────────────────
+async function generatePortalToken(specId) {
+  const token = crypto.randomUUID();
+  const { error } = await sb.from('specialists').update({ portal_token: token }).eq('id', specId);
+  if (error) { showToast('Chyba: ' + error.message, 'err'); return; }
+  const sp = specialists.find(s => s.id === specId);
+  if (sp) sp.portal_token = token;
+  const url = `${location.origin}${location.pathname.replace('ponuky.html','portal.html')}?specialist=${token}`;
+  await navigator.clipboard.writeText(url).catch(() => {});
+  showToast('Token vytvorený, link skopírovaný ✓', 'ok');
+  renderSpecialists();
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────

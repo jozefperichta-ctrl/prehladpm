@@ -3120,6 +3120,7 @@ async function addTaskNote(cislo, taskId) {
   } finally {
     if (inp) inp.disabled = false;
   }
+  taskNotesOpen.delete(taskId);
   refreshUlohy(cislo);
 }
 

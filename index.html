@@ -2538,9 +2538,9 @@ function buildCaflouTasksHtml(cislo) {
         ${fazaTag ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;flex-shrink:0;color:#fff;background:${TASK_FAZA_COLOR[fazaTag]}">${fazaTag}</span>` : ''}
         ${personName ? `<span style="font-size:10px;color:${personColor};flex-shrink:0;font-weight:${specName?'500':'400'}">${personName}</span>` : ''}
         ${deadStr}
+        ${lastNote ? `<span onclick="event.stopPropagation();toggleTaskNotes('${cislo}',${t.id})" style="flex:1;min-width:0;font-size:11px;color:var(--text2);cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="${lastNote.datum}: ${lastNote.text.replace(/"/g,'&quot;')}">${lastNote.datum}: ${lastNote.text}</span>` : (isExt ? `<span style="flex:1"></span>` : '')}
         ${isExt ? `<button onclick="event.stopPropagation();toggleTaskNotes('${cislo}',${t.id})" title="Zápisky" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0 0 0 4px;flex-shrink:0">${notesOpen?'▲':'📝'}</button>` : ''}
       </div>
-      ${lastNote ? `<div onclick="event.stopPropagation();toggleTaskNotes('${cislo}',${t.id})" style="font-size:11px;color:var(--text2);padding:1px 0 5px 0;line-height:1.35;cursor:pointer">${lastNote.datum}: ${lastNote.text}</div>` : ''}
       ${isExt && notesOpen ? `<div onclick="event.stopPropagation()" style="padding:0 0 5px 0">${buildTaskNotesHtml(cislo, t.id)}</div>` : ''}
       <div id="te-${editKey}" style="display:${editOpen?'flex':'none'};gap:6px;padding:4px 0 8px 0;flex-direction:column" onclick="event.stopPropagation()">
         <input id="tn-${editKey}" value="${safeName}" class="pd-sel" style="font-size:12px;width:100%;box-sizing:border-box">
@@ -2671,10 +2671,9 @@ function toggleTaskEdit(cislo, task_id) {
 async function saveCaflouTaskEdit(cislo, task_id) {
   const tid = Number(task_id);
   const tasks = caflouTasksCache[cislo];
-  if (!tasks) { alert('DEBUG: no cache for ' + cislo); return; }
+  if (!tasks) { showToast('Chyba: úlohy nie sú načítané', 'err'); return; }
   const t = tasks.find(x => Number(x.id) === tid);
-  if (!t) { alert('DEBUG: task ' + tid + ' not found, cache IDs: ' + tasks.slice(0,5).map(x=>x.id).join(',')); return; }
-  alert('DEBUG: OK, task found: ' + t.name);
+  if (!t) { showToast('Chyba: úloha nenájdená', 'err'); return; }
   const key = cislo + '-' + task_id;
   const name  = document.getElementById('tn-' + key)?.value.trim();
   const uid   = document.getElementById('tu-' + key)?.value;

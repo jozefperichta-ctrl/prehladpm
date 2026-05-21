@@ -2391,6 +2391,24 @@ async function bulkSetExtInt(cislo, isExt) {
     }).catch(() => {});
   }));
 }
+async function bulkSetDeadline(cislo, date) {
+  const selSet = caflouTaskSelected[cislo]; if (!selSet?.size) return;
+  const tasks = caflouTasksCache[cislo]; if (!tasks) return;
+  showToast('Ukladám termín…', 'ok');
+  const sel = tasks.filter(t => selSet.has(t.id) && !t.finished);
+  const endTime = date + 'T17:00:00+02:00';
+  sel.forEach(t => { t.end_time = endTime; });
+  refreshUlohy(cislo);
+  await Promise.all(sel.map(t =>
+    fetch(`https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks/${t.id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${cfg.caflou_key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: { end_time: endTime } })
+    }).catch(() => {})
+  ));
+  showToast('Termín nastavený ✓', 'ok');
+}
+
 async function bulkFinishTasks(cislo) {
   const selSet = caflouTaskSelected[cislo]; if (!selSet?.size) return;
   if (!confirm(`Ukončiť ${selSet.size} označených úloh?`)) return;
@@ -2607,6 +2625,9 @@ function buildCaflouTasksHtml(cislo) {
       <select onchange="event.stopPropagation();if(this.value){bulkSetFaza('${cislo}',this.value);this.value=''}"
         onclick="event.stopPropagation()" ${selCount===0?'disabled':''}
         style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:2px 4px;background:var(--bg2);color:var(--text2);cursor:pointer">${bulkFazaOpts}</select>
+      <input type="date" onclick="event.stopPropagation()" ${selCount===0?'disabled':''}
+        onchange="event.stopPropagation();if(this.value){bulkSetDeadline('${cislo}',this.value);this.value=''}"
+        title="Nastaviť termín" style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:2px 4px;background:var(--bg2);color:var(--text2);cursor:pointer;${selCount===0?'opacity:0.4':''}">
       <button onclick="event.stopPropagation();bulkSetExtInt('${cislo}',false)" ${selCount===0?'disabled':''}
         style="font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--text3);${selCount===0?'opacity:0.4':''}">
         Interné</button>
@@ -3360,7 +3381,16 @@ async function geminiZhrnVsetky() {
   let done = 0;
   for (const p of list) {
     const entries = (dennikMap[p.cislo] || []).slice(0, 5).map(d => d.datum + ': ' + d.text).join('\n');
-    const text = entries || p.opisAkcie || p.nazov;
+    let taskNotesText = '';
+    const extTasks = (caflouTasksCache[p.cislo]||[]).filter(t => !t.finished && (t.tags||[]).includes('ext'));
+    if (extTasks.length) {
+      const lines = [];
+      extTasks.forEach(t => {
+        (taskNotesCache[t.id]||[]).slice(0, 3).forEach(n => lines.push(`[${t.name}] ${n.datum}: ${n.text}`));
+      });
+      if (lines.length) taskNotesText = '\n\nZápisky k externým úlohám:\n' + lines.join('\n');
+    }
+    const text = (entries + taskNotesText) || p.opisAkcie || p.nazov;
     if (!text.trim()) { done++; continue; }
     try {
       const res = await fetch(cfg.url, {method:'POST',

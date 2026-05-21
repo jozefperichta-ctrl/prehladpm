@@ -72,6 +72,15 @@
     .status-icon{font-size:52px;margin-bottom:14px}
     .status-wrap h2{margin-bottom:8px;font-size:20px}
     .status-wrap p{color:var(--text2);line-height:1.5}
+
+    .filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+    .filter-btn{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer}
+    .filter-btn.on{background:var(--text);color:#f5f3ef;border-color:transparent}
+    .req-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+    .req-card-hdr{padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;cursor:pointer;user-select:none}
+    .req-card-hdr:hover{background:var(--bg3)}
+    .req-card-body{padding:14px 18px 18px;border-top:1px solid var(--border)}
+    .sent-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:500;background:var(--grn-bg);color:var(--green);border:1px solid var(--grn-bd)}
   </style>
 </head>
 <body>
@@ -93,8 +102,11 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
 const token = new URLSearchParams(location.search).get('token');
+const specialistToken = new URLSearchParams(location.search).get('specialist');
+let _specCtx = null, _profFilter = 'own', _quoteOpen = null;
 
 async function init() {
+  if (specialistToken) { await initSpecialistView(); return; }
   if (!token) { renderError('Neplatný link – chýba token.'); return; }
 
   const { data: inv } = await sb.from('invitations').select('*').eq('token', token).single();
@@ -263,6 +275,153 @@ async function submitQuote() {
   msgEl.innerHTML = '<div class="alert alert-ok">Ponuka bola úspešne odoslaná. Ďakujeme!</div>';
   btn.textContent = 'Aktualizovať ponuku';
   btn.disabled = false;
+}
+
+// ── SPECIALIST MARKETPLACE MODE ───────────────────────────────────────────────
+async function initSpecialistView() {
+  document.querySelector('.top-sub').textContent = '· Portál profesistov';
+  const { data: spec } = await sb.from('specialists').select('*').eq('portal_token', specialistToken).single();
+  if (!spec) { renderError('Neplatný link – profesista nenájdený.'); return; }
+  document.title = 'Portál – ' + spec.name;
+
+  const [{ data: reqs }, { data: invs }] = await Promise.all([
+    sb.from('requests').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+    sb.from('invitations').select('*').eq('specialist_id', spec.id),
+  ]);
+  const invIds = (invs || []).map(i => i.id);
+  const { data: qts } = invIds.length
+    ? await sb.from('quotes').select('*').in('invitation_id', invIds)
+    : { data: [] };
+
+  _specCtx = { spec, reqs: reqs || [], invs: invs || [], qts: qts || [] };
+  renderSpecialistView();
+}
+
+function renderSpecialistView() {
+  const { spec, reqs, invs, qts } = _specCtx;
+  const myProfs = (spec.profession || '').split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+  const filtered = _profFilter === 'own' && myProfs.length
+    ? reqs.filter(r => myProfs.some(p => (r.profession || '').toLowerCase().includes(p) || p.includes((r.profession || '').toLowerCase())))
+    : reqs;
+
+  const cards = filtered.length
+    ? filtered.map(r => renderReqCard(r)).join('')
+    : `<div style="text-align:center;padding:40px 20px;color:var(--text2);font-size:14px">Žiadne otvorené dopyty pre Vašu profesiu.</div>`;
+
+  document.getElementById('app').innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <h2>${spec.name}</h2>
+      ${spec.profession ? `<div class="sub">${spec.profession}</div>` : ''}
+    </div>
+    <div class="filter-bar">
+      <button class="filter-btn${_profFilter==='own'?' on':''}" onclick="setSpecFilter('own')">Moja profesia</button>
+      <button class="filter-btn${_profFilter==='all'?' on':''}" onclick="setSpecFilter('all')">Všetky dopyty</button>
+      <span style="font-size:12px;color:var(--text3);margin-left:auto">${filtered.length} dopytov</span>
+    </div>
+    ${cards}`;
+}
+
+function renderReqCard(r) {
+  const { invs, qts } = _specCtx;
+  const inv = invs.find(i => i.request_id === r.id);
+  const qt = inv ? qts.find(q => q.invitation_id === inv.id) : null;
+  const hasQuote = !!qt;
+  const isOpen = _quoteOpen === r.id;
+  const phases = Array.isArray(r.phases) ? r.phases : [];
+  const deadline = r.deadline ? new Date(r.deadline + 'T12:00:00').toLocaleDateString('sk-SK') : null;
+  const safeId = s => 'sp_' + r.id.replace(/-/g,'') + '_' + s.replace(/[^a-z0-9]/gi,'_');
+
+  const phBadges = phases.map(p => `<span class="badge">${p}</span>`).join(' ');
+  const priceRows = phases.map(ph => `<tr>
+    <td class="phase-name">${ph}</td>
+    <td><div class="price-inp-wrap">
+      <input type="number" id="${safeId(ph)}" min="0" step="100" placeholder="0" value="${qt?.prices?.[ph] ?? ''}">
+      <span>€ bez DPH</span>
+    </div></td>
+  </tr>`).join('');
+
+  return `<div class="req-card">
+    <div class="req-card-hdr" onclick="toggleReqCard('${r.id}')">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;margin-bottom:3px">${r.project_cislo ? r.project_cislo + ' – ' : ''}${r.project_name}</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${r.profession}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">${phBadges}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        ${deadline ? `<span style="font-size:12px;font-weight:600;color:var(--orange)">⏱ ${deadline}</span>` : ''}
+        ${hasQuote ? '<span class="sent-badge">✓ Ponuka odoslaná</span>' : ''}
+        <span style="font-size:16px;color:var(--text3)">${isOpen ? '▲' : '▼'}</span>
+      </div>
+    </div>
+    <div style="display:${isOpen ? 'block' : 'none'}">
+      <div class="req-card-body">
+        ${r.folder_url || r.folder_url_work ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          ${r.folder_url ? `<a href="${r.folder_url}" target="_blank" class="link-btn">📁 Podklady na nacenenie</a>` : ''}
+          ${r.folder_url_work ? `<a href="${r.folder_url_work}" target="_blank" class="link-btn">📂 Podklady na vypracovanie</a>` : ''}
+        </div>` : ''}
+        ${r.notes ? `<p class="note" style="margin-bottom:14px">${r.notes}</p>` : ''}
+        ${hasQuote ? '<div class="alert alert-info" style="margin-bottom:14px">Ponuka bola odoslaná. Môžete ju upraviť a znova odoslať.</div>' : ''}
+        <div id="squotemsg_${r.id}"></div>
+        <table class="price-table">
+          <thead><tr><th>Fáza</th><th style="text-align:right">Cena</th></tr></thead>
+          <tbody>${priceRows}</tbody>
+        </table>
+        <p class="hint" style="margin-bottom:14px">Ak fázu neponúkate, nechajte pole prázdne.</p>
+        <div class="frow">
+          <label>Poznámka (voliteľné)</label>
+          <textarea class="finput" id="snotes_${r.id}" rows="2" placeholder="Podmienky, výhrady, otázky...">${qt?.notes || ''}</textarea>
+        </div>
+        <button class="submit-btn" onclick="submitSpecQuote('${r.id}')">${hasQuote ? 'Aktualizovať ponuku' : 'Odoslať ponuku'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function setSpecFilter(f) { _profFilter = f; _quoteOpen = null; renderSpecialistView(); }
+
+function toggleReqCard(reqId) {
+  _quoteOpen = _quoteOpen === reqId ? null : reqId;
+  renderSpecialistView();
+}
+
+async function submitSpecQuote(reqId) {
+  const { spec, reqs, invs, qts } = _specCtx;
+  const req = reqs.find(r => r.id === reqId);
+  const phases = Array.isArray(req?.phases) ? req.phases : [];
+  const safeId = s => 'sp_' + reqId.replace(/-/g,'') + '_' + s.replace(/[^a-z0-9]/gi,'_');
+  const msgEl = document.getElementById('squotemsg_' + reqId);
+
+  const prices = {};
+  phases.forEach(ph => {
+    const v = document.getElementById(safeId(ph))?.value;
+    prices[ph] = v !== '' && v != null ? parseFloat(v) : null;
+  });
+  const notes = document.getElementById('snotes_' + reqId)?.value.trim() || '';
+
+  let inv = invs.find(i => i.request_id === reqId);
+  if (!inv) {
+    const { data: newInv, error: invErr } = await sb.from('invitations')
+      .insert({ request_id: reqId, specialist_id: spec.id, status: 'submitted' })
+      .select().single();
+    if (invErr) { if (msgEl) msgEl.innerHTML = `<div class="alert alert-err">Chyba: ${invErr.message}</div>`; return; }
+    inv = newInv;
+    _specCtx.invs.push(inv);
+  }
+
+  const existing = qts.find(q => q.invitation_id === inv.id);
+  const payload = { prices, notes, submitted_at: new Date().toISOString() };
+  const { error } = existing
+    ? await sb.from('quotes').update(payload).eq('id', existing.id)
+    : await sb.from('quotes').insert({ ...payload, invitation_id: inv.id });
+  if (error) { if (msgEl) msgEl.innerHTML = `<div class="alert alert-err">Chyba: ${error.message}</div>`; return; }
+
+  await sb.from('invitations').update({ status: 'submitted' }).eq('id', inv.id);
+  inv.status = 'submitted';
+  if (existing) { Object.assign(existing, payload); }
+  else { _specCtx.qts.push({ ...payload, invitation_id: inv.id, id: 'tmp' }); }
+
+  _quoteOpen = null;
+  renderSpecialistView();
 }
 
 init();

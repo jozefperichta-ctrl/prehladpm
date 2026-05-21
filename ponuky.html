@@ -200,17 +200,20 @@
       <label class="chk-lbl"><input type="checkbox" value="Inziniering"> Inžiniering</label>
     </div>
   </div>
-  <div class="frow">
-    <label>Aktuálna fáza (pre termín)</label>
-    <select class="finput" id="mRCurPhase">
-      <option value="">– vybrať –</option>
-      <option value="SZ">Stavebný zámer</option>
-      <option value="DSP/PS">Projekt stavby</option>
-      <option value="RP">Realizačný projekt</option>
-      <option value="UP">Územný plán</option>
-      <option value="Studia">Štúdia</option>
-      <option value="Inziniering">Inžiniering</option>
-    </select>
+  <div class="frow-2">
+    <div class="frow">
+      <label>Aktuálna fáza (pre termín)</label>
+      <select class="finput" id="mRCurPhase">
+        <option value="">– vybrať –</option>
+        <option value="SZ">Stavebný zámer</option>
+        <option value="DSP/PS">Projekt stavby</option>
+        <option value="RP">Realizačný projekt</option>
+        <option value="UP">Územný plán</option>
+        <option value="Studia">Štúdia</option>
+        <option value="Inziniering">Inžiniering</option>
+      </select>
+    </div>
+    <div class="frow"><label>Termín odovzdania fázy</label><input class="finput" type="date" id="mRDeadline"></div>
   </div>
   <div class="frow-2">
     <div class="frow"><label>Kedy dodáme podklady</label><input class="finput" type="date" id="mRPodkladyDatum"></div>
@@ -530,7 +533,11 @@ function buildReqDetail(r) {
 
   const phBadges = phases.map(p => `<span class="badge b-sent" style="margin-right:3px">${p}</span>`).join('');
   const fmtD = d => d ? new Date(d).toLocaleDateString('sk-SK') : null;
-  const dateInfo = [r.podklady_datum ? 'Podklady: <strong>' + fmtD(r.podklady_datum) + '</strong>' : null, r.hotovo_datum ? 'Výsledok: <strong>' + fmtD(r.hotovo_datum) + '</strong>' : null].filter(Boolean).join(' · ');
+  const dateInfo = [
+    r.deadline ? 'Termín fázy: <strong>' + fmtD(r.deadline) + '</strong>' : null,
+    r.podklady_datum ? 'Podklady: <strong>' + fmtD(r.podklady_datum) + '</strong>' : null,
+    r.hotovo_datum ? 'Výsledok: <strong>' + fmtD(r.hotovo_datum) + '</strong>' : null
+  ].filter(Boolean).join(' · ');
   const info = `<div style="margin-bottom:6px;font-size:13px">${phBadges}${r.current_phase ? ` <span style="color:var(--text2);margin-left:4px">Aktuálna:</span> <strong>${r.current_phase}</strong>` : ''}${r.folder_url ? ` &nbsp;<a href="${r.folder_url}" target="_blank" style="color:var(--blue)">Podklady nacenenie ↗</a>` : ''}${r.folder_url_work ? ` &nbsp;<a href="${r.folder_url_work}" target="_blank" style="color:var(--blue)">Podklady vypracovanie ↗</a>` : ''}</div>`;
   const dateInfoHtml = dateInfo ? ('<div style="font-size:13px;color:var(--text2);margin-bottom:10px">' + dateInfo + '</div>') : '';
   const note = r.notes ? `<p style="font-size:13px;color:var(--text2);margin-bottom:12px">${r.notes}</p>` : '';
@@ -686,6 +693,7 @@ function openReqModal(id) {
   document.getElementById('mRSuggest').innerHTML = '';
   document.getElementById('mRProf').value     = r?.profession     || '';
   document.getElementById('mRCurPhase').value      = r?.current_phase   || '';
+  document.getElementById('mRDeadline').value      = r?.deadline        || '';
   document.getElementById('mRPodkladyDatum').value = r?.podklady_datum  || '';
   document.getElementById('mRHotovoDatum').value   = r?.hotovo_datum    || '';
   document.getElementById('mRFolder').value         = r?.folder_url      || '';
@@ -712,6 +720,7 @@ async function saveReq() {
     project_cislo:  document.getElementById('mRCislo').value.trim(),
     project_name:   nazov, profession: prof, phases,
     current_phase:  document.getElementById('mRCurPhase').value,
+    deadline:       document.getElementById('mRDeadline').value || null,
     podklady_datum: document.getElementById('mRPodkladyDatum').value || null,
     hotovo_datum:   document.getElementById('mRHotovoDatum').value   || null,
     folder_url:      document.getElementById('mRFolder').value.trim(),
@@ -827,11 +836,13 @@ function renderSpecialists() {
       `<div style="padding:8px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border)">${label}</div>` +
       ctcs.map(c => {
         const sp = specialists.find(s => s.email === c.email);
+        const portalUrl = sp?.portal_token ? `${location.origin}${location.pathname.replace('ponuky.html','portal.html')}?specialist=${sp.portal_token}` : null;
         return `<div class="row-item" style="cursor:default">
           <div style="flex:1;line-height:1.5">
             <strong>${c.name}</strong>${c.company ? ` <span style="color:var(--text2)">· ${c.company}</span>` : ''}
             <br><span style="font-size:12px;color:var(--text2)">${c.email}${c.phone ? ' · ' + c.phone : ''}</span>
           </div>
+          ${portalUrl ? `<button class="btn btn-g btn-sm" title="${portalUrl}" onclick="copyTxt('${portalUrl}');showToast('Link skopírovaný')">🔗 Portál</button>` : ''}
           ${sp
             ? `<button class="btn btn-g btn-sm" onclick="openSpecModal('${sp.id}')">Upraviť</button>`
             : `<button class="btn btn-g btn-sm" onclick="addKontakt('${c.email.replace(/'/g,"\\'")}')">Pridať</button>`}
@@ -842,16 +853,19 @@ function renderSpecialists() {
   }
 
   if (!specialists.length) { el.innerHTML = '<div class="empty">Žiadni profesisti. Pridajte prvého.</div>'; return; }
-  el.innerHTML = specialists.map(s => `
-    <div class="row-item" style="cursor:default">
+  el.innerHTML = specialists.map(s => {
+    const portalUrl = s.portal_token ? `${location.origin}${location.pathname.replace('ponuky.html','portal.html')}?specialist=${s.portal_token}` : null;
+    return `<div class="row-item" style="cursor:default">
       <div style="flex:1;line-height:1.5">
         <strong>${s.name}</strong>${s.company ? ` <span style="color:var(--text2)">· ${s.company}</span>` : ''}
         ${s.profession ? `<span class="badge b-sent" style="margin-left:6px">${s.profession}</span>` : ''}
         <br><span style="font-size:12px;color:var(--text2)">${s.email}${s.phone ? ' · ' + s.phone : ''}</span>
       </div>
+      ${portalUrl ? `<button class="btn btn-g btn-sm" title="${portalUrl}" onclick="copyTxt('${portalUrl}');showToast('Link skopírovaný')">🔗 Portál</button>` : ''}
       <button class="btn btn-g btn-sm" onclick="openSpecModal('${s.id}')">Upraviť</button>
       <button class="btn btn-sm" onclick="deleteSpec('${s.id}')" style="color:var(--red);border-color:var(--red-bd);background:var(--red-bg)">×</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function addKontakt(email) {

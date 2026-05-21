@@ -576,6 +576,18 @@ async function selectWinner(e, invId, reqId) {
   await Promise.all(invs.map(i =>
     sb.from('invitations').update({ status: i.id === invId ? 'selected' : 'rejected' }).eq('id', i.id)
   ));
+  const req = requests.find(r => r.id === reqId);
+  const inv = invitations.find(i => i.id === invId);
+  const spec = specialists.find(s => s.id === inv?.specialist_id);
+  if (req?.caflou_task_id && spec?.name) {
+    await sb.from('task_specialists').upsert({
+      task_id: req.caflou_task_id,
+      task_name: req.notes || req.profession,
+      project_cislo: req.project_cislo,
+      specialist_name: spec.name,
+      updated_at: new Date().toISOString(),
+    });
+  }
   await loadAll();
   document.getElementById('rd-' + reqId)?.classList.add('on');
 }

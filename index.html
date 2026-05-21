@@ -2449,6 +2449,7 @@ async function createDopytFromTask(cislo, taskId) {
     const { error } = await sb.from('requests').insert({
       project_cislo: p.cislo, project_name: p.nazov,
       profession, phases: [], notes: t.name, status: 'active',
+      caflou_task_id: taskId,
     });
     if (error) throw new Error(error.message);
     showToast('Dopyt vytvorený ✓', 'ok');
@@ -2465,6 +2466,7 @@ async function bulkCreateDopyty(cislo) {
     project_cislo: p.cislo, project_name: p.nazov,
     profession: uniqueProfs.find(pr => t.name.toLowerCase().includes(pr.toLowerCase())) || '',
     phases: [], notes: t.name, status: 'active',
+    caflou_task_id: t.id,
   }));
   try {
     const { error } = await sb.from('requests').insert(rows);

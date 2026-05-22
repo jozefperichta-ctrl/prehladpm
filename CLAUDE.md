@@ -36,6 +36,11 @@ All mutable state is in module-level `let` variables:
 | `extSpecCache` | — | `{cislo: {taskName: specialistName}}` — loaded from Supabase at task load time |
 | `extSpecOverride` | `pmExtSpecOverride` | `{task_id: specialistName}` — manual specialist assignment for old ext tasks |
 | `specialistsList` | — | `[{id,name,profession}]` — cached from Supabase, loaded once on first task open |
+| `pmSeenAt` | `pmSeenAt` | `{cislo: ISO_timestamp}` — kedy user naposledy otvoril detail projektu; základ pre modrý denník badge |
+| `ponukyBadgeSet` | — | `Set<cislo>` projektov s aspoň jednou `submitted` invitation; badge zelená bodka |
+| `taskPonukySet` | — | `Set<task_id>` Caflou task_ids s `submitted` invitation; badge `ponuka ↗` na úlohe |
+| `_vytazenieCache` | — | Cached HTML ext tím modal; invalidovaný pri `syncData` |
+| `_intTimCache` | — | Cached HTML int tím modal; invalidovaný pri `syncData` |
 
 ### Data flow – Caflou
 
@@ -190,6 +195,65 @@ Pri vytváraní úlohy v dashboarde: dropdown obsahuje aj **"— externý profes
 
 `createDopytFromTask` aj `bulkCreateDopyty` ukladajú `caflou_task_id` do requestu. Keď sa v ponuky.html vyberie víťaz (`selectWinner`), automaticky sa zapíše do `task_specialists` — v dashboarde sa profesista objaví priamo na úlohe pri nasledujúcom načítaní.
 
+### Notifikačné badges
+
+**Modrá bodka** — nový zápis v denníku (od posledného otvorenia projektu):
+- `hasDennikBadge`: `dennikMap[p.cislo].some(e => new Date(e.created_at) > pmSeenAt[p.cislo])`
+- Zmizne hneď pri `toggleProjDetail` — uloží `pmSeenAt[cislo] = now`, odstráni `.nbadge` z DOM
+
+**Zelená bodka** — čaká cenová ponuka (`submitted` invitation):
+- `hasPonukyBadge = ponukyBadgeSet.has(p.cislo)`
+- Zmizne hneď pri `toggleProjDetail` — `ponukyBadgeSet.delete(cislo)`, odstráni `.nbadge` z DOM
+- `ponukyBadgeSet` sa obnoví zo Supabase pri každom `syncData()` — ak ponuka stále čaká, bodka sa vráti po sync
+
+**Badge `ponuka ↗` na úlohe** — `taskPonukySet.has(t.id)` → link `ponuky.html?task_id={t.id}` priamo na daný dopyt
+
+**Inicializácia v `syncData()`:**
+```javascript
+const { data: submittedInvs } = await sb.from('invitations').select('request_id').eq('status','submitted');
+const reqIds = [...new Set(submittedInvs.map(i => i.request_id))];
+const { data: reqs } = await sb.from('requests').select('id,project_cislo,caflou_task_id').in('id', reqIds);
+ponukyBadgeSet = new Set(reqs.map(r => r.project_cislo).filter(Boolean));
+taskPonukySet  = new Set(reqs.map(r => r.caflou_task_id).filter(Boolean));
+```
+- `pmSeenAt` pre nové projekty sa inicializuje na `now()` — historické záznamy nevyvolajú badge
+
+### Web Push notifikácie
+
+**Súbory:**
+- `sw.js` — service worker (push event → `showNotification`, notificationclick → focus/open tab)
+- `supabase/functions/send-push/index.ts` — Deno edge function (`npm:web-push`)
+- `supabase/push-setup.sql` — tabuľka `push_subscriptions (endpoint text unique, subscription jsonb)`
+- `supabase/PUSH-SETUP.md` — inštrukcie na nasadenie (VAPID kľúče, edge function, DB webhooks)
+
+**Flow:**
+1. User klikne 🔔 → `registerPush()` → uloží subscription do `push_subscriptions` cez Supabase
+2. DB webhook (Supabase Dashboard → Database → Webhooks) volá edge function `send-push`:
+   - `invitations` UPDATE → status `submitted` (a predtým nebol) → push "Nová cenová ponuka"
+   - `dennik` INSERT → push "Nový zápis v denníku"
+3. Edge function fetchne všetky subscriptions, odošle push, zmaže expirované (HTTP 410)
+
+**VAPID kľúče** uložené v Supabase Edge Function Secrets (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`). `SUPABASE_URL` a `SUPABASE_SERVICE_ROLE_KEY` sú nastavené automaticky.
+
+**`registerPush()`** — v `index.html` aj `ponuky.html`; konštanta `VAPID_PUBLIC` + helper `urlBase64ToUint8Array()`; auto-init IIFE po načítaní stránky (tiché — bez promptu).
+
+### Vyťaženie tímu
+
+Dva tlačidlá v headeri:
+
+**Ext tím** — `openVytazenieModal()`:
+- Scanuje všetky Caflou úlohy (paginated), berie len úlohy v aktívnych projektoch
+- Špecialist = `task_specialists[task_id]` alebo `extSpecOverride[task_id]`
+- Skupiny podľa profesie (`specialistsList[spec.name].profession`, len prvá), abecedne; `—` na konci
+- V rámci profesie: zoradené podľa počtu úloh zostupne
+- Cache: `_vytazenieCache`, invalidovaný pri `syncData`
+
+**Int tím** — `openIntTimModal()`:
+- Scanuje rovnako, ale berie len úlohy **bez tagu `ext`** (interné)
+- Člen tímu = `CAFLOU_USERS[t.target_user_id]`
+- Zoradené podľa počtu úloh zostupne; nepriradené (`—`) na konci
+- Cache: `_intTimCache`, invalidovaný pri `syncData`
+
 ### Vyhľadávanie projektov
 
 `searchQuery` — globálna premenná. Search input v `phase-bar`. Keď je neprázdny, `renderProjects()` zobrazí všetky zodpovedajúce projekty naprieč všetkými fázami s farebnými fáza badges. Plné project rows s detail divmi — projekt možno rozkliknúť priamo vo výsledkoch.
@@ -208,12 +272,14 @@ Profession quotes management module. Accessible at `ponuky.html` (linked from `i
 
 **Key patterns:**
 - `_loading` guard prevents concurrent `loadAll()` calls
-- `loadAll()` has 30s timeout — shows error with "Skúsiť znova" button instead of infinite spinner
+- `loadAll()` — **2-fázové progressive loading**: všetky 4 Supabase queries štartujú súčasne; render po requests+specialists, re-render po invitations+quotes (rýchlejší prvý render)
+- `loadAll()` má timeout 30s (fáza 1) + 15s (fáza 2) — zobrazí chybu s "Skúsiť znova"
 - `loadCaflouProjects()` uses `d.results` (not `d.data`), filter `!p.trash && !p.template`
 - `searchProjects()` uses `p.order_number` (not `p.number`)
 - Save functions (`saveReq`, `saveSpec`) set `_loading = false` before calling `loadAll()`
 - Toast notifications via `showToast(msg)`
 - Caflou project search in request modal — dropdown appears after typing
+- `openFromUrl()` — číta URL param `?task_id=`, nájde request podľa `caflou_task_id`, otvorí ho a scrollne naň (volané z task badge v index.html)
 
 **request modal fields:** project (Caflou search), profession, phases (checkboxes), notes, `folder_url` (Podklady na nacenenie), `folder_url_work` (Podklady na vypracovanie)
 
@@ -228,6 +294,11 @@ Profession quotes management module. Accessible at `ponuky.html` (linked from `i
 - `selectWinner(e, invId, reqId)` — vyberie víťaza: selected/rejected + zapíše do `task_specialists` ak request má `caflou_task_id`
 - `cancelWinner(e, invId, reqId)` — zruší výber: všetci selected/rejected → `submitted`, zmaže `task_specialists` záznam
 - `selectWinner` **nevytvára** Caflou úlohu (bolo odstránené — úloha sa vytvára pred dopytom)
+
+**Prepojenie dopytu s Caflou úlohou:**
+- `openTaskLink(reqId, cislo)` — načíta Caflou projekty, nájde podľa order_number, načíta úlohy (ext prvé), zobrazí dropdown
+- `saveTaskLink(reqId)` — uloží vybrané `caflou_task_id` do Supabase `requests`
+- Pre ručne vytvorené dopyty (bez `caflou_task_id`) — tlačidlo "🔗 Pripojiť k úlohe" v detail dopytu
 
 **Portál pre profesistov:**
 - `specialists.portal_token` — permanentný UUID token pre každého profesista

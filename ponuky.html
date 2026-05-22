@@ -321,6 +321,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('navEmail').textContent = session.user.email;
     await loadAll();
     initPush();
+    openFromUrl();
   } else {
     document.getElementById('loginWrap').classList.remove('hidden');
     document.getElementById('adminWrap').classList.add('hidden');
@@ -986,6 +987,18 @@ async function generatePortalToken(specId) {
   await navigator.clipboard.writeText(url).catch(() => {});
   showToast('Token vytvorený, link skopírovaný ✓', 'ok');
   renderSpecialists();
+}
+
+// ── OTVOR DOPYT Z URL PARAMETRA ──────────────────────────────────────────────
+function openFromUrl() {
+  const taskId = new URLSearchParams(location.search).get('task_id');
+  if (!taskId) return;
+  const matching = requests.filter(r => String(r.caflou_task_id) === taskId);
+  if (!matching.length) return;
+  matching.forEach(r => document.getElementById('rd-' + r.id)?.classList.add('on'));
+  // Scroll na prvý nájdený dopyt
+  const first = document.getElementById('rd-' + matching[0].id);
+  if (first) setTimeout(() => first.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
 // ── NAPOJENIE DOPYTU NA ÚLOHU ─────────────────────────────────────────────────

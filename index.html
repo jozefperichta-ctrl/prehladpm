@@ -3282,6 +3282,9 @@ function toggleProjDetail(cislo, e) {
     // Aktualizuj badge v DOM bez re-renderu celého zoznamu
     const nameEl = document.querySelector(`#detail-${cislo}`)?.previousElementSibling?.querySelector('.prow-name');
     if (nameEl) nameEl.querySelectorAll('.nbadge[title="Nový zápis v denníku"]').forEach(el => el.remove());
+    // Zelená bodka zmizne hneď po otvorení projektu (ponuka bola videná)
+    ponukyBadgeSet.delete(cislo);
+    if (nameEl) nameEl.querySelectorAll('.nbadge[title="Čaká cenová ponuka"]').forEach(el => el.remove());
   } else {
     caflouTaskSelectMode[cislo] = false;
     caflouTaskSelected[cislo] = new Set();

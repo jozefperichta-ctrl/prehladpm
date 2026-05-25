@@ -179,10 +179,11 @@ button { cursor: pointer; border: none; border-radius: 6px; font-size: 13px; fon
       <span class="step-num">2</span> Zodpovední projektanti
       <span style="margin-left:auto;display:flex;gap:6px;align-items:center">
         <span id="specs-hint" style="font-size:11px;color:var(--muted)"></span>
-        <button class="btn-secondary" style="font-size:11px;padding:4px 10px" onclick="saveProjektanti()" title="Uloží zoznam pre budúce projekty">💾 Uložiť</button>
+        <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="loadProjektantiFromProject()" id="btn-load-specs">Načítať z projektu</button>
+        <button class="btn-secondary" style="font-size:11px;padding:4px 10px" onclick="saveProjektanti()" title="Uloží ako predvolený zoznam">💾 Uložiť</button>
       </span>
     </h2>
-    <p class="hint">Prvý riadok = generálny projektant. Zoznam sa ukladá pre ďalšie projekty — stačí uložiť raz.</p>
+    <p class="hint">Klikni <strong>Načítať z projektu</strong> — doplní sa z priradených externých profesistov. Generálny projektant = prvý riadok.</p>
     <table class="specs-table">
       <thead>
         <tr>
@@ -355,6 +356,55 @@ async function extractFromAsr() {
     btn.textContent = 'Načítať z TS_ASR';
     btn.disabled = false;
   }
+}
+
+async function loadProjektantiFromProject() {
+  const cislo = document.getElementById('fld-cislo').value.trim();
+  if (!cislo) { alert('Najprv vyber projekt (krok 1).'); return; }
+  const btn = document.getElementById('btn-load-specs');
+  btn.disabled = true; btn.textContent = 'Načítavam…';
+
+  try {
+    // requests pre projekt → selected invitations → specialists
+    const reqRes = await fetch(
+      `${SB_URL}/rest/v1/requests?project_cislo=eq.${encodeURIComponent(cislo)}&select=id,profession`,
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }
+    );
+    const reqs = await reqRes.json();
+    if (!reqs.length) { btn.textContent = 'Načítať z projektu'; btn.disabled = false; document.getElementById('specs-hint').textContent = 'Projekt nemá žiadne dopyty'; return; }
+
+    const reqIds = reqs.map(r => r.id);
+    const invRes = await fetch(
+      `${SB_URL}/rest/v1/invitations?request_id=in.(${reqIds.join(',')})&status=eq.selected&select=request_id,specialist_id`,
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }
+    );
+    const invs = await invRes.json();
+    if (!invs.length) { btn.textContent = 'Načítať z projektu'; btn.disabled = false; document.getElementById('specs-hint').textContent = 'Žiadni vybraní profesisti'; return; }
+
+    const specIds = [...new Set(invs.map(i => i.specialist_id))];
+    const specRes = await fetch(
+      `${SB_URL}/rest/v1/specialists?id=in.(${specIds.join(',')})&select=id,name,profession,reg`,
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }
+    );
+    const specs = await specRes.json();
+    const specMap = Object.fromEntries(specs.map(s => [s.id, s]));
+
+    // Zostav zoznam: profesia z request, meno+reg z specialist
+    const rows = invs.map(inv => {
+      const req = reqs.find(r => r.id === inv.request_id);
+      const sp  = specMap[inv.specialist_id] || {};
+      return { profesia: req?.profession || sp.profession || '', meno: sp.name || '', reg: sp.reg || '' };
+    }).filter(r => r.meno);
+
+    // Vyčisti tabuľku a doplň
+    document.getElementById('specs-body').innerHTML = '';
+    rows.forEach(r => addSpecRow(r));
+    document.getElementById('specs-hint').textContent = `✓ ${rows.length} profesistov`;
+    setTimeout(() => { document.getElementById('specs-hint').textContent = ''; }, 3000);
+  } catch(e) {
+    alert('Chyba: ' + e.message);
+  }
+  btn.textContent = 'Načítať z projektu'; btn.disabled = false;
 }
 
 // ── SPECS TABLE ──────────────────────────────────────────────────────────────

@@ -243,7 +243,10 @@
     <div class="frow"><label>E-mail *</label><input class="finput" type="email" id="mSEmail" placeholder="jan@example.sk"></div>
     <div class="frow"><label>Profesia</label><input class="finput" id="mSProf" placeholder="Statik, TZB..."></div>
   </div>
-  <div class="frow"><label>Telefón</label><input class="finput" id="mSPhone" placeholder="+421 900 000 000"></div>
+  <div class="frow-2">
+    <div class="frow"><label>Telefón</label><input class="finput" id="mSPhone" placeholder="+421 900 000 000"></div>
+    <div class="frow"><label>Reg. číslo oprávnenia</label><input class="finput" id="mSReg" placeholder="XXXX AA"></div>
+  </div>
   <div class="frow"><label>Poznámka</label><textarea class="finput" id="mSNotes" rows="2"></textarea></div>
   <div id="mSMsg"></div>
   <div class="btn-row">
@@ -952,6 +955,7 @@ function openSpecModal(id) {
   document.getElementById('mSEmail').value   = s?.email      || '';
   document.getElementById('mSProf').value    = s?.profession || '';
   document.getElementById('mSPhone').value   = s?.phone      || '';
+  document.getElementById('mSReg').value     = s?.reg        || '';
   document.getElementById('mSNotes').value   = s?.notes      || '';
   document.getElementById('mSMsg').innerHTML = '';
   document.getElementById('modalSpec').classList.remove('hidden');
@@ -965,6 +969,7 @@ async function saveSpec() {
     company:    document.getElementById('mSCompany').value.trim(),
     profession: document.getElementById('mSProf').value.trim(),
     phone:      document.getElementById('mSPhone').value.trim(),
+    reg:        document.getElementById('mSReg').value.trim(),
     notes:      document.getElementById('mSNotes').value.trim(),
   };
   const btn = document.querySelector('#modalSpec .btn-p');

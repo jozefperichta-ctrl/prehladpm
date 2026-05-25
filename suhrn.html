@@ -111,9 +111,11 @@ button { cursor: pointer; border: none; border-radius: 6px; font-size: 13px; fon
 <div class="container">
   <h1>Generátor projektovej dokumentácie</h1>
 
-  <!-- KROK 1: PROJEKT -->
+  <!-- KROK 1: IDENTIFIKAČNÉ ÚDAJE -->
   <div class="card">
-    <h2><span class="step-num">1</span> Projekt</h2>
+    <h2><span class="step-num">1</span> Identifikačné údaje projektu
+      <button class="btn-secondary" onclick="extractFromAsr()" id="btn-extract-asr" style="margin-left:auto;font-size:12px;padding:5px 12px">Načítať z TS_ASR</button>
+    </h2>
     <div class="search-wrap">
       <input id="proj-search" type="text" placeholder="Hľadaj projekt v Caflou (číslo alebo názov)…" oninput="onSearchInput(this.value)" autocomplete="off">
       <div id="proj-dropdown" class="dropdown hidden"></div>
@@ -321,6 +323,37 @@ async function saveFolderUrl() {
     headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({ project_cislo: cislo, folder_url: url }),
   }).catch(() => {});
+}
+
+async function extractFromAsr() {
+  const folderUrl = document.getElementById('folder-url').value.trim();
+  if (!folderUrl) { alert('Najprv zadaj link na projektový priečinok (krok 3).'); return; }
+  const folderId = extractFolderId(folderUrl);
+  if (!folderId) { alert('Neplatný Drive link.'); return; }
+  if (!cfg.url) { alert('Chýba Apps Script URL (Nastavenia).'); return; }
+
+  const btn = document.getElementById('btn-extract-asr');
+  btn.disabled = true;
+  btn.textContent = 'Načítavam…';
+
+  try {
+    const res = await callScript({ action: 'extractMetadata', folderId });
+    if (!res.ok) throw new Error(res.error || 'Chyba');
+    const d = res.data;
+    if (d.nazov)     document.getElementById('fld-nazov').value = d.nazov;
+    if (d.stavebnik) document.getElementById('fld-stavebnik').value = d.stavebnik;
+    if (d.miesto)    document.getElementById('fld-miesto').value = d.miesto;
+    if (d.parcely)   document.getElementById('fld-parcely').value = d.parcely;
+    if (d.lv)        document.getElementById('fld-lv').value = d.lv;
+    if (d.cislo && !document.getElementById('fld-cislo').value.trim())
+      document.getElementById('fld-cislo').value = d.cislo;
+    btn.textContent = '✓ Načítané z ' + res.source;
+    setTimeout(() => { btn.textContent = 'Načítať z TS_ASR'; btn.disabled = false; }, 3000);
+  } catch(e) {
+    alert('Chyba: ' + e.message);
+    btn.textContent = 'Načítať z TS_ASR';
+    btn.disabled = false;
+  }
 }
 
 // ── SPECS TABLE ──────────────────────────────────────────────────────────────

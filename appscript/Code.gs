@@ -190,6 +190,7 @@ function doPost(e) {
     else if (req.action === 'listProjectFolder')  resp = akcia_listProjectFolder(req);
     else if (req.action === 'generateZoznam')     resp = akcia_generateZoznam(req);
     else if (req.action === 'generateSuhrn')      resp = akcia_generateSuhrn(req);
+    else if (req.action === 'extractMetadata')    resp = akcia_extractMetadata(req);
     else resp = { ok: false, error: 'Neznáma akcia: ' + req.action };
     return ContentService.createTextOutput(JSON.stringify(resp))
       .setMimeType(ContentService.MimeType.JSON);
@@ -403,6 +404,52 @@ function buildFolderTree(folder, depth) {
     node.subfolders.sort(function(a,b) { return a.name.localeCompare(b.name, 'sk'); });
   }
   return node;
+}
+
+// ── EXTRAKCIA METADÁT Z ASR TECHNICKEJ SPRÁVY ────────────────────────────────
+
+function akcia_extractMetadata(req) {
+  var folderId = req.folderId;
+  if (!folderId) throw new Error('Chýba folderId');
+
+  var tree = buildFolderTree(DriveApp.getFolderById(folderId), 0);
+
+  // Hľadaj TS_ASR ako prvé, fallback na prvú tech správu kdekoľvek
+  var report = null;
+  function findAsrReport(node) {
+    node.files.forEach(function(f) {
+      if (!report && f.name.toUpperCase().startsWith('TS_ASR')) report = f;
+    });
+    if (!report) node.subfolders.forEach(findAsrReport);
+  }
+  findAsrReport(tree);
+  if (!report) report = findFirstTechReport(tree);
+  if (!report) return { ok: false, error: 'Nenašla sa žiadna technická správa' };
+
+  var text = fileToText(report.id, report.type);
+
+  var prompt =
+    'Z nasledujúceho textu technickej správy extrahuj tieto údaje a vráť ich ako JSON objekt.\n' +
+    'Ak niektorý údaj nie je v texte uvedený, použi null.\n\n' +
+    'Požadované polia:\n' +
+    '- nazov: názov stavby (napr. "NOVOSTAVBA RODINNÉHO DOMU")\n' +
+    '- stavebnik: meno a adresa stavebníka/investora (každý stavebník na nový riadok)\n' +
+    '- miesto: miesto stavby, katastrálne územie, okres\n' +
+    '- parcely: parcelné čísla (KN-C alebo KN-E)\n' +
+    '- lv: číslo listu vlastníctva\n' +
+    '- cislo: číslo stavby zo stavebného portálu (ak je uvedené)\n\n' +
+    'Odpovedaj LEN validným JSON objektom, bez markdown, bez vysvetlení.\n\n' +
+    'TEXT TECHNICKEJ SPRÁVY:\n' + text;
+
+  var raw = volajGemini(prompt);
+  // Vyčisti prípadné markdown obalenie
+  var json = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  try {
+    var data = JSON.parse(json);
+    return { ok: true, data: data, source: report.name };
+  } catch(e) {
+    return { ok: false, error: 'Nepodarilo sa parsovať JSON: ' + json.substring(0, 200) };
+  }
 }
 
 // ── GENEROVANIE ZOZNAMU DOKUMENTÁCIE ─────────────────────────────────────────

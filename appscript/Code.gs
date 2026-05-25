@@ -413,19 +413,13 @@ function akcia_generateZoznam(req) {
 
   var tree = buildFolderTree(DriveApp.getFolderById(folderId), 0);
 
-  // Ak nie je zadaný názov stavby, prečítaj ho z prvej dostupnej technickej správy
-  var nazovStavby = p.nazov || '';
-  if (!nazovStavby) {
-    var firstReport = findFirstTechReport(tree);
-    if (firstReport) {
-      try {
-        var snippet = fileToText(firstReport.id, firstReport.type).substring(0, 1000);
-        // Hľadaj "Stavba:" alebo "NOVOSTAVBA" alebo podobné v texte
-        var m = snippet.match(/stavba[:\s]+([^\n]{5,80})/i);
-        if (m) nazovStavby = m[1].trim().toUpperCase();
-      } catch(e) {}
-    }
+  // Prečítaj prvú tech správu pre extrakciu metadát projektu
+  var metaSnippet = '';
+  var firstReport = findFirstTechReport(tree);
+  if (firstReport) {
+    try { metaSnippet = fileToText(firstReport.id, firstReport.type).substring(0, 3000); } catch(e) {}
   }
+  var nazovStavby = p.nazov || '';
 
   var specsText = buildSpecsText(req.specialists || []);
   // Generálny projektant = prvý so slovom "generál" alebo prvý v zozname
@@ -460,14 +454,15 @@ function akcia_generateZoznam(req) {
     '- Prílohy (PROTOKOL, NÁVRH, príloha č.): uvádzaj ako "PRÍLOHA Č.x – Názov" pod technickou správou\n' +
     '- SIT súbory (koordinačný, katastrálna mapa): patria do sekcie C, nie D\n' +
     '- Maping priečinkov → profesie: Architektura/ASR → ARCHITEKTONICKO-STAVEBNÉ RIEŠENIE, Statika → STATIKA, ZT/Zdravotechnika/ZTI → ZDRAVOTECHNIKA, Vykurovanie/UK/UT → VYKUROVANIE, EI/Elektro/Elektroinštalácie → ELEKTROINŠTALÁCIE, PBS/PO/Požiarna → sekcia E PRÍLOHY, Energia/EHB → sekcia E PRÍLOHY\n\n' +
-    'ÚDAJE O PROJEKTE (ak pole obsahuje "extrahovať", nájdi hodnotu v súboroch nižšie):\n' +
+    'ÚDAJE O PROJEKTE (polia bez hodnoty extrahuj z obsahu technickej správy nižšie):\n' +
     'Stupeň: ' + (p.stupen || 'Projekt stavby') + '\n' +
-    'ID projektu / stavby: ' + (p.cislo || '(extrahovať z PD)') + '\n' +
-    'Názov stavby: ' + (nazovStavby || '(extrahovať z PD – hľadaj "Stavba:", "NOVOSTAVBA", "REKONŠTRUKCIA")') + '\n' +
-    'Stavebník: ' + (p.stavebnik || '(extrahovať z PD – hľadaj "Stavebník:", "Investor:", "Objednávateľ:")') + '\n' +
-    'Miesto stavby: ' + (p.miesto || '(extrahovať z PD – hľadaj "Miesto:", "Obec:", adresu stavby)') + '\n' +
-    'Parcelné čísla: ' + (p.parcely || '(extrahovať z PD – hľadaj "parcela", "parc. č.", "KN")') + '\n' +
+    'ID projektu / stavby: ' + (p.cislo || '—') + '\n' +
+    'Názov stavby: ' + (nazovStavby || '—') + '\n' +
+    'Stavebník: ' + (p.stavebnik || '—') + '\n' +
+    'Miesto stavby: ' + (p.miesto || '—') + '\n' +
+    'Parcelné čísla: ' + (p.parcely || '—') + '\n' +
     'Dátum: ' + (p.datum || '—') + '\n\n' +
+    (metaSnippet ? 'OBSAH TECHNICKEJ SPRÁVY (pre extrakciu metadát – stavba, stavebník, miesto, parcely, LV):\n' + metaSnippet + '\n\n' : '') +
     'GENERÁLNY PROJEKTANT:\n' + (genProjektant || '—') + '\n\n' +
     'ZOZNAM VŠETKÝCH PROJEKTANTOV FIRMY (vyber relevantných podľa profesií v PD):\n' + specsText + '\n\n' +
     'POKYN pre projektantov: Pre každú profesiu v sekcii D prirad zodpovedného projektanta z vyššie uvedeného zoznamu podľa zhody profesie. Ak pre danú profesiu niet zodpovedajúci projektant, napíš "—".\n\n' +
@@ -525,14 +520,14 @@ function akcia_generateSuhrn(req) {
     'Vygeneruj kompletnú Súhrnnú správu projektu stavby (B – Súhrnná správa) v slovenčine.\n\n' +
     'VZOR ŠTRUKTÚRY (dodržuj presne tieto kapitoly a písmena a-o):\n' + vzorText + '\n\n' +
     '---\n' +
-    'ÚDAJE O PROJEKTE (ak pole obsahuje "extrahovať", nájdi hodnotu v technických správach):\n' +
+    'ÚDAJE O PROJEKTE (polia s hodnotou "—" extrahuj z technických správ nižšie):\n' +
     'Stupeň: ' + (p.stupen || 'Projekt stavby') + '\n' +
-    'ID projektu / stavby: ' + (p.cislo || '(extrahovať z PD)') + '\n' +
-    'Názov stavby: ' + (nazovStavby || '(extrahovať z PD – hľadaj "Stavba:", "NOVOSTAVBA", "REKONŠTRUKCIA")') + '\n' +
-    'Stavebník: ' + (p.stavebnik || '(extrahovať z PD – hľadaj "Stavebník:", "Investor:", "Objednávateľ:")') + '\n' +
-    'Miesto stavby: ' + (p.miesto || '(extrahovať z PD – hľadaj "Miesto:", "Obec:", adresu stavby)') + '\n' +
-    'Parcelné čísla: ' + (p.parcely || '(extrahovať z PD – hľadaj "parcela", "parc. č.", "KN")') + '\n' +
-    'LV: ' + (p.lv || '(extrahovať z PD ak je uvedené)') + '\n' +
+    'ID projektu / stavby: ' + (p.cislo || '—') + '\n' +
+    'Názov stavby: ' + (nazovStavby || '—') + '\n' +
+    'Stavebník: ' + (p.stavebnik || '—') + '\n' +
+    'Miesto stavby: ' + (p.miesto || '—') + '\n' +
+    'Parcelné čísla: ' + (p.parcely || '—') + '\n' +
+    'LV: ' + (p.lv || '—') + '\n' +
     'Dátum: ' + (p.datum || '—') + '\n' +
     'Predpokladané náklady: ' + (p.naklady || '—') + '\n' +
     'Charakter stavby: ' + (p.typ || '—') + '\n' +

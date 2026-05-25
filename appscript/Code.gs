@@ -377,18 +377,12 @@ function akcia_listProjectFolder(req) {
 }
 
 function buildFolderTree(folder, depth) {
-  var READABLE = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
-    'application/vnd.google-apps.document'
-  ];
   var node = { name: folder.getName(), id: folder.getId(), files: [], subfolders: [] };
   var fi = folder.getFiles();
   while (fi.hasNext()) {
     var f = fi.next();
-    if (READABLE.indexOf(f.getMimeType()) !== -1) {
-      node.files.push({ id: f.getId(), name: f.getName(), type: f.getMimeType() });
+    if (f.getMimeType() === 'application/pdf') {
+      node.files.push({ id: f.getId(), name: f.getName(), type: 'application/pdf' });
     }
   }
   node.files.sort(function(a,b) { return a.name.localeCompare(b.name, 'sk'); });
@@ -450,13 +444,13 @@ function akcia_generateZoznam(req) {
     '   Zodpovedný projektant: [meno z tabuľky projektantov]\n' +
     '   [zoznam výkresov a dokumentov z Drive priečinka]\n' +
     '6. E PRÍLOHY (PBS – Požiarna bezpečnosť, Energetické hodnotenie)\n\n' +
-    'PRAVIDLÁ PRE ZOZNAM SÚBOROV:\n' +
-    '- Každý súbor = jeden riadok v zozname (okrem SIT súborov ktoré patria do sekcie C)\n' +
-    '- Číslo výkresu: použi číselnú predponu z názvu súboru (01, 02, 03...) alebo číslo za pomlčkou\n' +
-    '- Názov výkresu: odstráň príponu (.pdf, .dwg, .docx), nahraď _ medzerou, oprav diakritiku\n' +
-    '- Ak súbor obsahuje "TS", "technická správa", "tech_sprava": uvádzaj ako "Technická správa" BEZ čísla, na prvom mieste\n' +
-    '- Prílohy (príloha č.1, PROTOKOL, NÁVRH...): zachovaj ako prílohy k technickej správe\n' +
-    '- Profesie podľa názvov priečinkov: Architektura/ASR → ARCHITEKTONICKO-STAVEBNÉ RIEŠENIE, Statika → STATIKA, ZT/Zdravotechnika → ZDRAVOTECHNIKA, Vykurovanie/UK → VYKUROVANIE, EI/Elektro → ELEKTROINŠTALÁCIE, PBS/PO → sekcia E\n\n' +
+    'PRAVIDLÁ – všetky súbory sú PDF:\n' +
+    '- KAŽDÝ PDF súbor musí byť v zozname – nič nevynechaj\n' +
+    '- Ak súbor v názve obsahuje "TS", "technická správa", "tech správa", "tech_sprava" (case-insensitive): → "Technická správa" BEZ čísla, VŽDY NA PRVOM MIESTE v sekcii profesie\n' +
+    '- Ostatné PDF = výkresy: číslo výkresu = číselná predpona z názvu (01, 02...), názov = zvyšok bez prípony, nahraď _ medzerou\n' +
+    '- Prílohy (PROTOKOL, NÁVRH, príloha č.): uvádzaj ako "PRÍLOHA Č.x – Názov" pod technickou správou\n' +
+    '- SIT súbory (koordinačný, katastrálna mapa): patria do sekcie C, nie D\n' +
+    '- Maping priečinkov → profesie: Architektura/ASR → ARCHITEKTONICKO-STAVEBNÉ RIEŠENIE, Statika → STATIKA, ZT/Zdravotechnika/ZTI → ZDRAVOTECHNIKA, Vykurovanie/UK/UT → VYKUROVANIE, EI/Elektro/Elektroinštalácie → ELEKTROINŠTALÁCIE, PBS/PO/Požiarna → sekcia E PRÍLOHY, Energia/EHB → sekcia E PRÍLOHY\n\n' +
     'ÚDAJE O PROJEKTE:\n' +
     'Stupeň: ' + (p.stupen || 'Projekt stavby') + '\n' +
     'ID projektu / stavby: ' + (p.cislo || '—') + '\n' +
@@ -537,12 +531,12 @@ function akcia_generateSuhrn(req) {
     'PROJEKTANTI PROFESIÍ:\n' + specsText + '\n\n' +
     'TECHNICKÉ SPRÁVY PROFESIÍ (obsah z Drive – toto je primárny zdroj):\n' + (reportsSection || '(žiadne)') + '\n\n' +
     'POKYNY:\n' +
-    '- Ak "Názov stavby" nie je zadaný, extrahuj ho z hlavičiek technických správ (hľadaj "Stavba:", "NOVOSTAVBA", "REKONŠTRUKCIA" a podobne)\n' +
-    '- Obsah z technických správ použi PRIAMO – nekopíruj celé vety, ale zachovaj konkrétne čísla, materiály, rozmery\n' +
-    '- Vygeneruj KOMPLETNÝ dokument – všetky kapitoly 1 až 9 so všetkými podbodmi a–o\n' +
-    '- Zahrň tabuľky odpadov (kapitola 8c) – počas výstavby aj prevádzky\n' +
-    '- Štýl: odborný slovenský, stavebná dokumentácia\n' +
-    '- Začni priamo od "1) Identifikačné údaje" (titulnú hlavičku generujeme zvlášť)\n' +
+    '- Ak "Názov stavby" nie je zadaný, nájdi ho v technických správach (hľadaj "Stavba:", "NOVOSTAVBA", "REKONŠTRUKCIA"...)\n' +
+    '- POUŽI LEN informácie z technických správ – konkrétne čísla, materiály, rozmery, popisy\n' +
+    '- Kde technická správa neobsahuje informáciu pre daný bod, napíš iba "—" alebo jednu vetu konštatáciu\n' +
+    '- NEPLŇ generickým textom – lepší je kratší presný obsah ako dlhý vymyslený\n' +
+    '- Vygeneruj všetky kapitoly 1–9 so všetkými podbodmi podľa vzoru\n' +
+    '- Začni priamo od "1) Identifikačné údaje"\n' +
     '- Výstup: len text bez markdown, bez ``` obalov';
 
   var content = volajGemini(prompt);

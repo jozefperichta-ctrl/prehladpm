@@ -389,6 +389,10 @@ function buildFolderTree(folder, depth) {
     var aTs = isTechReport(a.name) ? 0 : 1;
     var bTs = isTechReport(b.name) ? 0 : 1;
     if (aTs !== bTs) return aTs - bTs;
+    // číselná predpona (napr. "01_", "D-01-") → numerické zoradenie
+    var aNum = parseInt((a.name.match(/^(\d+)/) || [])[1], 10);
+    var bNum = parseInt((b.name.match(/^(\d+)/) || [])[1], 10);
+    if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
     return a.name.localeCompare(b.name, 'sk');
   });
   if (depth < 3) {

@@ -426,9 +426,11 @@ async function loadProjektantiFromCaflou(silent) {
     // Načítaj task_ids projektu z Caflou
     const projRes = await fetch(
       `https://app.caflou.com/api/v1/${cfg.caflou_id}/projects/${caflouid}`,
-      { headers: { 'api-key': cfg.caflou_key } }
+      { headers: { 'Authorization': `Bearer ${cfg.caflou_key}` } }
     );
+    console.log('[projektanti] Caflou project status:', projRes.status);
     const projData = await projRes.json();
+    console.log('[projektanti] projData keys:', Object.keys(projData), 'task_ids:', projData.data?.task_ids?.length ?? projData.task_ids?.length ?? 'none');
     const taskIds = (projData.data?.task_ids || projData.task_ids || []);
     if (!taskIds.length) {
       if (!silent) document.getElementById('specs-hint').textContent = 'Projekt nemá úlohy v Caflou';
@@ -452,7 +454,7 @@ async function loadProjektantiFromCaflou(silent) {
     while (true) {
       const tr = await fetch(
         `https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks?per=100&page=${page}`,
-        { headers: { 'api-key': cfg.caflou_key } }
+        { headers: { 'Authorization': `Bearer ${cfg.caflou_key}` } }
       );
       const td = await tr.json();
       const batch = (td.data || td.results || []).filter(t => taskIds.includes(t.id) && (t.tags||[]).includes('ext'));
@@ -510,6 +512,7 @@ async function loadProjektantiFromCaflou(silent) {
       if (!silent) document.getElementById('specs-hint').textContent = 'Nenašli sa priradení profesisti';
     }
   } catch(e) {
+    console.error('[projektanti] catch:', e);
     if (!silent) document.getElementById('specs-hint').textContent = 'Chyba: ' + e.message;
     else DEFAULT_SPECS.forEach(s => addSpecRow(s));
   }

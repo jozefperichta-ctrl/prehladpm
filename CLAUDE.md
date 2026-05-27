@@ -50,6 +50,13 @@ All mutable state is in module-level `let` variables:
 - `caflouAddComment()` writes denník entries to Caflou as project comments (`POST /comments`) as backup.
 - Credentials stored in `caflou.env` (gitignored) and in localStorage. If no credentials, `loadDemo()` loads hardcoded sample data.
 
+**Aktivita (stavMap) sync cez `custom_column_produkt`:**
+- Caflou nemá `custom_column_aktivita` — aktivita sa číta/zapisuje cez `custom_column_produkt`
+- `CAFLOU_PRODUKT_TO_STAV`: "Nové"→`pripravovany`, "Robíme na tom"→`aktivny`, "Hotové"→`aktivny`, "Pozastavené"→`pozastaveny`, "Povoľovací proces"→žiadna aktivita (Inžiniering)
+- `CAFLOU_STAV_TO_PRODUKT`: `pripravovany`→"Nové", `aktivny`→"Robíme na tom", `pozastaveny`→"Pozastavené"
+- `saveProjStav()` PATCHuje `custom_column_produkt` pri zmene aktivity v dashboarde
+- `syncData()` po načítaní projektov: ak `p.aktivita` (z `custom_column_produkt`) je truthy → aktualizuje `stavMap`; projekty bez Caflou hodnoty ale so `stavMap` zápisom → `toPush` loop ich pushne do Caflou
+
 ### Data flow – Supabase (denník)
 
 Same Supabase project as `ponuky.html` (`cfjkomqxzqflotrqxfyl.supabase.co`, anon key in `index.html`).
@@ -172,7 +179,6 @@ CAFLOU_USERS             // user_id → meno
 
 **Apps Script akcie** (`cfg.url`, `doPost` → if/else if, nie switch):
 - `zhrniProjekt` — zhrnutie jedného projektu (cislo, nazov, faza, text)
-- `navrhniUlohy` — navrhne úlohy z denník záznamu (text) → `{ulohy:[{profesia,popis}]}`
 - `getMaily` — maily pre jeden projekt (cislo) zo SHEET_MAILY → `{maily:[...]}`
 - `getKontakty` — Google Contacts cez People API → `{contacts:[...]}`
 - `zhrniPortfolio` — celkový stav portfólia (text = denníky aktívnych projektov so zápismi, 1 záznam/projekt)

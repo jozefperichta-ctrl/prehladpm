@@ -374,7 +374,7 @@ function renderSpecialistView() {
                   r.podklady_datum  ? `<span style="font-size:13px;color:var(--text2)">Podklady dostanete: <strong>${fmtD(r.podklady_datum)}</strong></span>` : null,
                   r.hotovo_datum    ? `<span style="font-size:13px;color:var(--text2)">Váš diel hotový do: <strong>${fmtD(r.hotovo_datum)}</strong></span>` : null,
                 ].filter(Boolean);
-                return infoItems.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">${infoItems.join('')}</div>` : '';
+                return `${infoItems.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">${infoItems.join('')}</div>` : ''}${r.notes ? `<p class="note" style="margin-bottom:14px">${r.notes}</p>` : ''}`;
               })() : ''}
               ${qt && priceRows ? `<h3 style="font-size:14px;font-weight:600;margin-bottom:10px">Vaša odoslaná ponuka</h3>
                 <table class="price-table"><thead><tr><th>Fáza</th><th style="text-align:right">Cena</th></tr></thead><tbody>${priceRows}</tbody></table>` : ''}

@@ -511,20 +511,47 @@ function switchTab(t) {
 function renderRequests() {
   const el = document.getElementById('reqList');
   if (!requests.length) { el.innerHTML = '<div class="empty">Žiadne dopyty. Vytvorte prvý dopyt.</div>'; return; }
-  el.innerHTML = requests.map(r => {
-    const invs = invitations.filter(i => i.request_id === r.id);
-    const nSub = invs.filter(i => ['submitted','selected','rejected'].includes(i.status)).length;
-    return `
-      <div>
+
+  const firstRender = !el.querySelector('details[data-proj]');
+  const openProjs = firstRender ? null : new Set([...el.querySelectorAll('details[data-proj][open]')].map(d => d.dataset.proj));
+  const openReqs  = new Set([...el.querySelectorAll('.row-expand.on')].map(d => d.id.replace('rd-', '')));
+
+  // Group by project
+  const projMap = {};
+  requests.forEach(r => {
+    const key = r.project_cislo || r.project_name || r.id;
+    if (!projMap[key]) projMap[key] = { cislo: r.project_cislo, name: r.project_name, reqs: [] };
+    projMap[key].reqs.push(r);
+  });
+
+  // Sort projects: newest cislo first (desc), then by name
+  const projects = Object.entries(projMap).sort(([a], [b]) => b.localeCompare(a, 'sk'));
+
+  el.innerHTML = projects.map(([key, proj]) => {
+    const isOpen = firstRender || openProjs.has(key);
+    // Sort requests within project by profession
+    const sorted = [...proj.reqs].sort((a, b) => (a.profession || '').localeCompare(b.profession || '', 'sk'));
+    const rows = sorted.map(r => {
+      const invs = invitations.filter(i => i.request_id === r.id);
+      const nSub = invs.filter(i => ['submitted','selected','rejected'].includes(i.status)).length;
+      return `<div>
         <div class="row-item" onclick="toggleReq('${r.id}')">
-          <span style="font-size:12px;color:var(--text3);min-width:52px">${r.project_cislo || '—'}</span>
-          <span style="font-weight:500;flex:1">${r.project_name}</span>
-          <span class="badge b-sent" style="margin-right:4px">${r.profession}</span>
+          <span class="badge b-sent">${r.profession}</span>
+          <span style="flex:1"></span>
           <span style="font-size:12px;color:var(--text2);margin-right:6px">${nSub}/${invs.length}</span>
           <span class="badge ${r.status === 'active' ? 'b-active' : 'b-closed'}">${r.status === 'active' ? 'Aktívny' : 'Uzavretý'}</span>
         </div>
-        <div class="row-expand" id="rd-${r.id}">${buildReqDetail(r)}</div>
+        <div class="row-expand${openReqs.has(r.id) ? ' on' : ''}" id="rd-${r.id}">${buildReqDetail(r)}</div>
       </div>`;
+    }).join('');
+
+    return `<details data-proj="${key}"${isOpen ? ' open' : ''} style="border-bottom:1px solid var(--border)">
+      <summary style="padding:10px 14px;font-size:13px;font-weight:600;background:var(--bg3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;user-select:none;border-bottom:1px solid var(--border)">
+        <span style="flex:1">${proj.cislo ? proj.cislo + ' – ' : ''}${proj.name}</span>
+        <span style="font-size:12px;font-weight:400;color:var(--text3)">${proj.reqs.length}</span>
+      </summary>
+      ${rows}
+    </details>`;
   }).join('');
 }
 
@@ -588,7 +615,6 @@ function buildReqDetail(r) {
     ? `🔗 Úloha #${r.caflou_task_id}`
     : '🔗 Pripojiť k úlohe';
   const btns = `<div class="btn-row mt10">
-    <button class="btn btn-p btn-sm" onclick="openInviteModal(event,'${r.id}')">+ Pozvať profesistov</button>
     <button class="btn btn-g btn-sm" onclick="openReqModal('${r.id}')">Upraviť</button>
     <button class="btn btn-g btn-sm" onclick="openTaskLink('${r.id}','${r.project_cislo||''}')">${taskLinkLabel}</button>
     ${r.status === 'active'

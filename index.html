@@ -2280,6 +2280,22 @@ function openChronoModal() {
   sel.innerHTML = '<option value="">— projekt —</option>' +
     activeProjs.map(p => `<option value="${p.cislo}">${p.cislo} – ${p.nazov}</option>`).join('');
   buildChronoContent();
+  loadChronoTaskNotes();
+}
+
+async function loadChronoTaskNotes() {
+  const extTasks = [];
+  for (const [cislo, tasks] of Object.entries(caflouTasksCache)) {
+    if (!Array.isArray(tasks)) continue;
+    tasks.filter(t => !t.finished && (t.tags||[]).includes('ext')).forEach(t => {
+      if (taskNotesCache[t.id] === undefined) extTasks.push({ cislo, taskId: t.id });
+    });
+  }
+  if (!extTasks.length) return;
+  for (let i = 0; i < extTasks.length; i += 5) {
+    await Promise.all(extTasks.slice(i, i + 5).map(({ cislo, taskId }) => preloadTaskNotes(cislo, taskId)));
+    if (!document.getElementById('chronoModal').classList.contains('hidden')) buildChronoContent();
+  }
 }
 
 function buildChronoContent() {
@@ -2322,8 +2338,8 @@ function buildChronoContent() {
     return `<div style="padding:6px 0;border-bottom:1px solid var(--border)55">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px">
         <span style="font-size:10px;color:var(--text3);flex-shrink:0">${e.datum}</span>
-        <span style="font-size:11px;font-weight:600;color:var(--blue);flex-shrink:0">${e.cislo}</span>
-        <span style="font-size:11px;color:var(--text3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${e.projName}</span>
+        <span style="font-size:10px;color:var(--text3);flex-shrink:0">${e.cislo}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${e.projName}</span>
         ${badge}
       </div>
       <div style="font-size:12px;color:var(--text);line-height:1.4">${e.text}</div>

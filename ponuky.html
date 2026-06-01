@@ -529,20 +529,31 @@ function renderRequests() {
 
   el.innerHTML = projects.map(([key, proj]) => {
     const isOpen = firstRender || openProjs.has(key);
-    // Sort requests within project by profession
     const sorted = [...proj.reqs].sort((a, b) => (a.profession || '').localeCompare(b.profession || '', 'sk'));
-    const rows = sorted.map(r => {
-      const invs = invitations.filter(i => i.request_id === r.id);
-      const nSub = invs.filter(i => ['submitted','selected','rejected'].includes(i.status)).length;
-      return `<div>
-        <div class="row-item" onclick="toggleReq('${r.id}')">
-          <span class="badge b-sent">${r.profession}</span>
-          <span style="flex:1"></span>
-          <span style="font-size:12px;color:var(--text2);margin-right:6px">${nSub}/${invs.length}</span>
-          <span class="badge ${r.status === 'active' ? 'b-active' : 'b-closed'}">${r.status === 'active' ? 'Aktívny' : 'Uzavretý'}</span>
-        </div>
-        <div class="row-expand${openReqs.has(r.id) ? ' on' : ''}" id="rd-${r.id}">${buildReqDetail(r)}</div>
-      </div>`;
+
+    // Sub-group by profession category (prefix before dash/space)
+    const catMap = {};
+    sorted.forEach(r => { const c = profCat(r.profession); if (!catMap[c]) catMap[c] = []; catMap[c].push(r); });
+    const cats = Object.entries(catMap).sort(([a], [b]) => a.localeCompare(b, 'sk'));
+    const showCats = cats.length > 1;
+
+    const rows = cats.map(([cat, catReqs]) => {
+      const catHdr = showCats
+        ? `<div style="padding:5px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);background:var(--bg);border-bottom:1px solid var(--border)55">${cat}</div>`
+        : '';
+      return catHdr + catReqs.map(r => {
+        const invs = invitations.filter(i => i.request_id === r.id);
+        const nSub = invs.filter(i => ['submitted','selected','rejected'].includes(i.status)).length;
+        return `<div>
+          <div class="row-item" onclick="toggleReq('${r.id}')">
+            <span class="badge b-sent">${r.profession}</span>
+            <span style="flex:1"></span>
+            <span style="font-size:12px;color:var(--text2);margin-right:6px">${nSub}/${invs.length}</span>
+            <span class="badge ${r.status === 'active' ? 'b-active' : 'b-closed'}">${r.status === 'active' ? 'Aktívny' : 'Uzavretý'}</span>
+          </div>
+          <div class="row-expand${openReqs.has(r.id) ? ' on' : ''}" id="rd-${r.id}">${buildReqDetail(r)}</div>
+        </div>`;
+      }).join('');
     }).join('');
 
     return `<details data-proj="${key}"${isOpen ? ' open' : ''} style="border-bottom:1px solid var(--border)">
@@ -553,6 +564,11 @@ function renderRequests() {
       ${rows}
     </details>`;
   }).join('');
+}
+
+function profCat(p) {
+  if (!p) return '—';
+  return (p.split(/\s*[-–]\s*/)[0] || p).trim();
 }
 
 function buildReqDetail(r) {

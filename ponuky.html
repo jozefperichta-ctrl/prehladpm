@@ -387,6 +387,8 @@ async function syncSpecProfessions() {
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || 'Chyba');
     contacts = d.contacts || [];
+    const existingEmails = new Set(specialists.map(s => s.email).filter(Boolean));
+
     const toUpdate = specialists
       .map(s => {
         const c = contacts.find(c => c.email === s.email);
@@ -396,9 +398,26 @@ async function syncSpecProfessions() {
         return { id: s.id, profession };
       })
       .filter(Boolean);
-    if (!toUpdate.length) { showToast('Všetko aktuálne'); return; }
-    await Promise.all(toUpdate.map(u => sb.from('specialists').update({ profession: u.profession }).eq('id', u.id)));
-    showToast(`Aktualizovaných: ${toUpdate.length}`);
+
+    const toInsert = contacts.filter(c =>
+      c.email &&
+      !existingEmails.has(c.email) &&
+      (c.labels || []).some(l => l.toLowerCase() !== 'klient')
+    ).map(c => ({
+      name: c.name || '',
+      email: c.email,
+      profession: (c.labels || []).filter(l => l.toLowerCase() !== 'klient').join(', ')
+    }));
+
+    if (!toUpdate.length && !toInsert.length) { showToast('Všetko aktuálne'); return; }
+    const ops = [];
+    if (toUpdate.length) ops.push(Promise.all(toUpdate.map(u => sb.from('specialists').update({ profession: u.profession }).eq('id', u.id))));
+    if (toInsert.length) ops.push(sb.from('specialists').insert(toInsert));
+    await Promise.all(ops);
+    const parts = [];
+    if (toUpdate.length) parts.push(`aktualizovaných: ${toUpdate.length}`);
+    if (toInsert.length) parts.push(`pridaných: ${toInsert.length}`);
+    showToast(parts.join(', '));
     _loading = false;
     await loadAll();
   } catch(e) {

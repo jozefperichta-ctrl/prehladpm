@@ -194,6 +194,10 @@
     <div class="frow"><label>Názov projektu</label><input class="finput" id="mRNazov" placeholder="BD Nitra"></div>
   </div>
   <div class="frow"><label>Profesia</label><input class="finput" id="mRProf" placeholder="Statik, TZB, Požiarnik..."></div>
+  <div class="frow" id="mRTaskWrap" style="display:none">
+    <label>Caflou úloha (voliteľné)</label>
+    <div id="mRTaskContent"><select class="finput" id="mRTaskSel"><option value="">— bez prepojenia —</option></select></div>
+  </div>
   <div class="frow">
     <label>Fázy – pre ktoré chcete cenu</label>
     <div class="chk-grid" id="phaseChks">
@@ -543,6 +547,47 @@ function selectProject(cislo, name) {
   document.getElementById('mRNazov').value = name;
   document.getElementById('mRSearch').value = (cislo ? cislo + ' – ' : '') + name;
   document.getElementById('mRSuggest').innerHTML = '';
+  loadTasksForModal(cislo);
+}
+
+async function loadTasksForModal(cislo, selectedTaskId = null) {
+  const wrap = document.getElementById('mRTaskWrap');
+  const content = document.getElementById('mRTaskContent');
+  if (!wrap) return;
+  if (!cfg.caflou_key || !cislo) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  content.innerHTML = '<span style="font-size:13px;color:var(--text3)">Načítavam úlohy…</span>';
+  try {
+    await loadCaflouProjects();
+    const proj = caflouProjects.find(p => p.order_number === cislo);
+    if (!proj) { content.innerHTML = '<span style="font-size:13px;color:var(--text3)">Projekt nenájdený v Caflou.</span>'; return; }
+    const taskIdSet = new Set((proj.task_ids || []).map(Number));
+    let tasks = [], page = 1, tp = 1;
+    while (page <= tp) {
+      const res = await fetch(
+        `https://app.caflou.com/api/v1/${cfg.caflou_id}/tasks?project_id=${proj.id}&per=100&page=${page}`,
+        { headers: { Authorization: `Bearer ${cfg.caflou_key}` } }
+      );
+      const d = await res.json();
+      const batch = (d.results || []).filter(t => taskIdSet.size === 0 || taskIdSet.has(Number(t.id)));
+      tasks = tasks.concat(batch);
+      if (taskIdSet.size > 0 && tasks.length >= taskIdSet.size) break;
+      tp = d.total_pages || 1; page++;
+    }
+    const active = tasks.filter(t => !t.finished);
+    active.sort((a, b) => {
+      const ae = (a.tags || []).includes('ext'), be = (b.tags || []).includes('ext');
+      return ae === be ? 0 : ae ? -1 : 1;
+    });
+    if (!active.length) { content.innerHTML = '<span style="font-size:13px;color:var(--text3)">Projekt nemá aktívne úlohy.</span>'; return; }
+    const opts = active.map(t => {
+      const ext = (t.tags || []).includes('ext') ? ' [ext]' : '';
+      return `<option value="${t.id}"${Number(t.id) === Number(selectedTaskId) ? ' selected' : ''}>${t.name}${ext}</option>`;
+    }).join('');
+    content.innerHTML = `<select class="finput" id="mRTaskSel"><option value="">— bez prepojenia —</option>${opts}</select>`;
+  } catch(e) {
+    content.innerHTML = `<span style="font-size:13px;color:var(--red)">Chyba: ${e.message}</span>`;
+  }
 }
 
 document.addEventListener('click', e => {
@@ -904,6 +949,12 @@ function openReqModal(id) {
   document.querySelectorAll('#phaseChks input').forEach(cb => { cb.checked = phases.includes(cb.value); });
   document.getElementById('mRMsg').innerHTML = '';
   document.getElementById('modalReq').classList.remove('hidden');
+  if (r?.project_cislo) {
+    loadTasksForModal(r.project_cislo, r.caflou_task_id);
+  } else {
+    const wrap = document.getElementById('mRTaskWrap');
+    if (wrap) wrap.style.display = 'none';
+  }
   loadCaflouProjects();
 }
 
@@ -917,6 +968,7 @@ async function saveReq() {
   }
   const btn = document.querySelector('#modalReq .btn-p');
   if (btn) { btn.disabled = true; btn.textContent = 'Ukladám...'; }
+  const taskSelVal = document.getElementById('mRTaskSel')?.value;
   const data = {
     project_cislo:  document.getElementById('mRCislo').value.trim(),
     project_name:   nazov, profession: prof, phases,
@@ -927,6 +979,7 @@ async function saveReq() {
     folder_url:      document.getElementById('mRFolder').value.trim(),
     folder_url_work: document.getElementById('mRFolderWork').value.trim(),
     notes:          document.getElementById('mRNotes').value.trim(),
+    caflou_task_id: taskSelVal ? parseInt(taskSelVal) : null,
   };
   const { error } = editReqId
     ? await sb.from('requests').update(data).eq('id', editReqId)

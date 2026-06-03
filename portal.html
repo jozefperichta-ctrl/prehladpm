@@ -461,8 +461,7 @@ function renderReqCard(r) {
   return `<div class="req-card">
     <div class="req-card-hdr" onclick="toggleReqCard('${r.id}')">
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:600;margin-bottom:3px">${r.project_cislo ? r.project_cislo + ' – ' : ''}${r.project_name}</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${r.profession}</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">${r.profession}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">${phBadges}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">

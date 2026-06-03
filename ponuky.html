@@ -361,7 +361,6 @@ async function loadAll() {
     const [i, q] = await Promise.race([Promise.all([iPr, qPr]), tout(15000)]);
     invitations = i.data || []; quotes = q.data || [];
     renderRequests();
-    loadKontakty();
   } catch(e) {
     document.getElementById('reqList').innerHTML = `<div class="empty">Chyba načítania: ${e.message}. <button onclick="_loading=false;loadAll()" style="margin-left:8px;padding:4px 10px;cursor:pointer">Skúsiť znova</button></div>`;
   } finally {
@@ -900,6 +899,14 @@ function openInviteModal(e, reqId) {
   inviteReqId = reqId;
   const r = requests.find(r => r.id === reqId);
   document.getElementById('mInvDesc').textContent = `${r?.project_cislo ? r.project_cislo + ' – ' : ''}${r?.project_name} · ${r?.profession}`;
+
+  if (!contacts.length && cfg.url) {
+    document.getElementById('mInvList').innerHTML = '<div style="padding:12px;font-size:13px;color:var(--text2)">Načítavam kontakty…</div>';
+    document.getElementById('mInvMsg').innerHTML = '';
+    document.getElementById('modalInvite').classList.remove('hidden');
+    loadKontakty().then(() => openInviteModal(null, reqId));
+    return;
+  }
 
   if (contacts.length) {
     const allLabels = [...new Set(contacts.flatMap(c => c.labels || []))].sort((a,b) => a.localeCompare(b,'sk'));

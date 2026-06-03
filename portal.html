@@ -356,18 +356,18 @@ function renderSpecialistView() {
     const resProjects = Object.entries(resProjMap).sort(([a], [b]) => b.localeCompare(a, 'sk'));
     const resCards = resProjects.map(([, proj]) => {
       const sorted = [...proj.reqs].sort((a, b) => (a.profession || '').localeCompare(b.profession || '', 'sk'));
-      const catMap = {};
-      sorted.forEach(r => { const c = profCat(r.profession); if (!catMap[c]) catMap[c] = []; catMap[c].push(r); });
-      const cats = Object.entries(catMap).sort(([a], [b]) => a.localeCompare(b, 'sk'));
-      const showCats = cats.length > 1;
-      const content = cats.map(([cat, catReqs]) =>
-        (showCats ? `<div style="padding:6px 2px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);border-bottom:1px solid var(--border)55;margin:8px 0 4px">${cat}</div>` : '') +
-        catReqs.map(r => {
+      const resProfMap = {};
+      sorted.forEach(r => { const p = r.profession || '—'; if (!resProfMap[p]) resProfMap[p] = []; resProfMap[p].push(r); });
+      const resProfs = Object.entries(resProfMap).sort(([a], [b]) => a.localeCompare(b, 'sk'));
+      const content = resProfs.map(([prof, profReqs]) =>
+        `<div style="font-size:15px;font-weight:600;color:var(--text);padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:4px">${prof}</div>` +
+        profReqs.map(r => {
           const inv = invs.find(i => i.request_id === r.id);
           const sel = inv?.status === 'selected';
           const qt = qts.find(q => q.invitation_id === inv?.id);
           const isOpen = _resultOpen === r.id;
           const phases = Array.isArray(r.phases) ? r.phases : [];
+          const phBadgesRes = phases.map(p => `<span class="badge">${p}</span>`).join(' ');
           const priceRows = qt && phases.length ? phases.map(ph => {
             const v = qt.prices?.[ph];
             return `<tr><td class="phase-name">${ph}</td><td style="text-align:right;font-weight:500">${v != null ? Number(v).toLocaleString('sk-SK') + ' € bez DPH' : '—'}</td></tr>`;
@@ -375,7 +375,7 @@ function renderSpecialistView() {
           return `<div class="req-card" style="border-left:3px solid ${sel ? '#1e7a4a' : '#c8bfb5'}">
             <div class="req-card-hdr" onclick="toggleResultCard('${r.id}')">
               <div style="flex:1;min-width:0">
-                <div style="font-size:15px;font-weight:600;margin-bottom:4px">${r.profession}</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;min-height:20px">${phBadgesRes || '<span style="font-size:13px;color:var(--text3)">—</span>'}</div>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
                 <span style="font-size:13px;font-weight:600;color:${sel ? '#1e7a4a' : 'var(--text3)'}">
@@ -431,13 +431,12 @@ function renderSpecialistView() {
     cards = projects.map(([, proj]) => {
       const sorted = [...proj.reqs].sort((a, b) => (a.profession || '').localeCompare(b.profession || '', 'sk'));
 
-      const catMap = {};
-      sorted.forEach(r => { const c = profCat(r.profession); if (!catMap[c]) catMap[c] = []; catMap[c].push(r); });
-      const cats = Object.entries(catMap).sort(([a], [b]) => a.localeCompare(b, 'sk'));
-      const showCats = cats.length > 1;
-      const content = cats.map(([cat, catReqs]) =>
-        (showCats ? `<div style="padding:6px 2px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);border-bottom:1px solid var(--border)55;margin:8px 0 4px">${cat}</div>` : '') +
-        catReqs.map(r => renderReqCard(r)).join('')
+      const profMap = {};
+      sorted.forEach(r => { const p = r.profession || '—'; if (!profMap[p]) profMap[p] = []; profMap[p].push(r); });
+      const profs = Object.entries(profMap).sort(([a], [b]) => a.localeCompare(b, 'sk'));
+      const content = profs.map(([prof, profReqs]) =>
+        `<div style="font-size:15px;font-weight:600;color:var(--text);padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:4px">${prof}</div>` +
+        profReqs.map(r => renderReqCard(r)).join('')
       ).join('');
 
       return `<details open style="margin-bottom:16px">
@@ -490,8 +489,7 @@ function renderReqCard(r) {
   return `<div class="req-card">
     <div class="req-card-hdr" onclick="toggleReqCard('${r.id}')">
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:600;margin-bottom:6px">${r.profession}</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">${phBadges}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;min-height:20px">${phBadges || '<span style="font-size:13px;color:var(--text3)">—</span>'}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
         ${deadline ? `<span style="font-size:12px;font-weight:600;color:var(--orange)">⏱ ${deadline}</span>` : ''}

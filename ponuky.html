@@ -347,11 +347,15 @@ async function loadAll() {
   document.getElementById('reqList').innerHTML = '<div class="empty" style="color:var(--text2)">Načítavam…</div>';
   const t0 = performance.now();
   try {
-    const [rRes, sRes, iRes, qRes] = await Promise.all([
-      sb.from('requests').select('*').order('created_at', { ascending: false }),
-      sb.from('specialists').select('id,name,company,email,profession,phone,portal_token,notes').order('name'),
-      sb.from('invitations').select('id,request_id,specialist_id,token,status'),
-      sb.from('quotes').select('id,invitation_id,prices,notes,submitted_at,deadline'),
+    const tout = new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout — skontrolujte pripojenie')), 30000));
+    const [rRes, sRes, iRes, qRes] = await Promise.race([
+      Promise.all([
+        sb.from('requests').select('*').order('created_at', { ascending: false }),
+        sb.from('specialists').select('id,name,company,email,profession,phone,portal_token,notes').order('name'),
+        sb.from('invitations').select('id,request_id,specialist_id,token,status'),
+        sb.from('quotes').select('id,invitation_id,prices,notes,submitted_at,deadline'),
+      ]),
+      tout,
     ]);
     console.log(`loadAll queries: ${Math.round(performance.now()-t0)}ms`);
     requests = rRes.data || []; specialists = sRes.data || [];
